@@ -14,18 +14,29 @@ Build a presence in the AI/tech space by sharing insights that resonate. The goa
 
 ```
 content/
-├── posts/                 # Weekly post files with multiple posts per file
-│   └── W4-01-26.md        # Week 4 of January 2026
-├── .scratchpad/           # Ideas, research, rough drafts
+├── .scratchpad/           # Unstructured ideation (ideas, research, fragments)
 │   └── .history/          # Archived scratchpad files
+├── posts/                 # Short-form: tweets, LinkedIn posts (weekly files)
+│   └── W4-01-26.md
+├── articles/              # Long-form: full essays (one per file)
+│   ├── drafts/            # Work in progress
+│   └── published/         # Live articles
 └── CLAUDE.md
 ```
 
 ---
 
-## Posts Folder
+## Scratchpad
 
-The `posts/` folder contains markdown files organized by **week**, not day. This prevents file sprawl while keeping posts organized.
+The `.scratchpad/` folder is for raw ideation—half-baked ideas, research notes, random observations, content fragments. No structure required. Let ideas accumulate and see what rises to the top.
+
+**Archival rule:** When scratchpad exceeds **10 files**, move older files to `.history/`. Keep scratchpad lean and current.
+
+---
+
+## Posts
+
+Short-form content: tweets, LinkedIn posts, quick takes. Organized by **week** to prevent file sprawl.
 
 ### Naming Convention
 
@@ -36,8 +47,6 @@ Examples:
 W1-01-26.md   # Week 1 of January 2026
 W52-12-25.md  # Week 52 of December 2025
 ```
-
-Week number is the ISO week of the year (1-52/53).
 
 ### Post File Format
 
@@ -70,13 +79,55 @@ Each file contains multiple posts. Use checkboxes to track posting status:
 - `[ ]` — Not yet posted
 - `[x]` — Posted (add date)
 
-Separate each post with `---` for clear visual breaks.
+---
+
+## Articles
+
+Long-form content: full essays, deep dives, thought pieces. **One article per file.**
+
+### Folder Structure
+
+```
+articles/
+├── drafts/      # Work in progress
+└── published/   # Live articles (move here after publishing)
+```
+
+### Naming Convention
+
+```
+{YYYY}-{MM}-{slug}.md
+
+Examples:
+2026-01-why-rag-fails.md
+2026-01-building-agents-that-work.md
+```
+
+### Article Format
+
+Every article starts with YAML frontmatter:
+
+```yaml
+---
+title: Why RAG Fails in Production
+status: draft | ready | published
+published_date: 2026-01-24   # add when published
+platform: blog | medium | substack
+---
+
+{Article content here}
+```
+
+**Status meanings:**
+- `draft` — Still writing, not ready for review
+- `ready` — Written and polished, waiting to publish
+- `published` — Live (move file to `published/` folder)
 
 ---
 
 ## Tone & Voice
 
-This is the most important section. The content needs to sound like a real person wrote it—someone who knows their stuff but doesn't take themselves too seriously.
+The content needs to sound like a real person—someone who knows their stuff but doesn't take themselves too seriously.
 
 ### Core Principles
 
@@ -140,11 +191,23 @@ Content that performs isn't just informative—it makes people feel something.
 
 ## Workflow
 
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ .scratchpad │────▶│   drafts/   │────▶│ published/  │
+│  (ideation) │     │  (writing)  │     │   (live)    │
+└─────────────┘     └─────────────┘     └─────────────┘
+       │                                       │
+       │            ┌─────────────┐            │
+       └───────────▶│   posts/    │◀───────────┘
+                    │  (weekly)   │
+                    └─────────────┘
+```
+
 1. **Capture** — Drop raw ideas in `.scratchpad/`
-2. **Develop** — Flesh out the idea, find the angle that makes it interesting
-3. **Write** — Draft the post in the current week's file in `posts/`
+2. **Develop** — Flesh out the idea, find the angle
+3. **Write** — Draft in `articles/drafts/` or current week's `posts/` file
 4. **Vibe check** — Read it out loud. Does it sound like you?
-5. **Post** — Publish and mark checkbox as done with date
+5. **Publish** — Post and update status/checkbox. Move articles to `published/`
 
 ---
 

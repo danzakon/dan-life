@@ -102,3 +102,4 @@ When navigating this repo:
 2. Respect the scratchpad/archive system
 3. Update checkboxes as work progresses
 4. Suggest CLAUDE.md updates when patterns evolve
+5. **Be vigilant about scratchpad hygiene** — proactively check file counts and archive when thresholds are exceeded (default 15, some directories may specify lower)
