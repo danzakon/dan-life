@@ -15,12 +15,23 @@ This repository is an operating system for managing life—work, content, resear
 ```
 life/
 ├── content/          # Social media content (AI engineering, tech, business)
-├── tenex/            # Work scratchpad for Tenex (tech lead responsibilities)
+├── tenex/            # Engineering leadership and process development
 ├── research/         # Research notes and explorations
 ├── prompts/          # Prompt templates and experiments
 ├── shopping/         # Shopping lists and purchase tracking
+├── private/          # Personal/sensitive files (gitignored)
 └── CLAUDE.md         # This file
 ```
+
+---
+
+## Private Folder
+
+The `private/` directory contains personal and sensitive files that are:
+- **Gitignored** — never committed to version control
+- **Off-limits by default** — do not read, reference, or explore files in this folder
+
+**Access rule:** Only access files in `private/` when the user explicitly adds a specific file from that folder into the conversation context. Do not proactively search, glob, or read from this directory.
 
 ---
 

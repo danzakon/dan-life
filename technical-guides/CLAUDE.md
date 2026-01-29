@@ -38,5 +38,6 @@ neovim-lsp-config.md
 | Guide | Description |
 |-------|-------------|
 | `agent-browser-claude-code-setup.md` | Setting up Vercel's agent-browser for browser automation with Claude Code |
-| `hetzner-remote-dev-setup.md` | Setting up a Hetzner VPS for remote development with SSH and Termius |
 | `claude-chrome-browser-control.md` | Setting up the Claude Chrome extension to let Claude Code control your browser |
+| `claude-skills-setup-guide.md` | Complete guide to creating and deploying Claude Skills for Claude Code |
+| `hetzner-remote-dev-setup.md` | Setting up a Hetzner VPS for remote development with SSH and Termius |
