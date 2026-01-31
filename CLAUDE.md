@@ -114,3 +114,22 @@ When navigating this repo:
 3. Update checkboxes as work progresses
 4. Suggest CLAUDE.md updates when patterns evolve
 5. **Be vigilant about scratchpad hygiene** — proactively check file counts and archive when thresholds are exceeded (default 15, some directories may specify lower)
+
+---
+
+## Commit Early, Commit Often
+
+After completing meaningful work, **proactively commit and push**. Don't wait to be asked.
+
+**Commit after:**
+- Generating new content (articles, research notes, posts)
+- Creating or significantly editing files
+- Completing a task or request
+- Any batch of related changes
+
+**How:**
+```bash
+git add -A && git commit -m "feat: {concise description}" && git push
+```
+
+The goal is to never lose work and keep the repo in sync. Small, frequent commits are better than large, infrequent ones. If in doubt, commit.
