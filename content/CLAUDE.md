@@ -218,3 +218,149 @@ Content that performs isn't just informative—it makes people feel something.
 - Tech leadership without the fluff
 - Industry trends and honest commentary
 - Things I got wrong and what I learned
+
+---
+
+## Writing Articles That Don't Sound Like AI
+
+When converting research reports into published articles, the goal is writing that performs well online while sounding unmistakably human. Here's how.
+
+### The Research-to-Article Pipeline
+
+```
+Research Report              Article
+┌──────────────────┐         ┌──────────────────┐
+│ Comprehensive    │         │ One perspective  │
+│ Multiple angles  │   ──▶   │ Multiple angles  │
+│ All the data     │         │   in service of  │
+│ Exploratory tone │         │   the narrative  │
+└──────────────────┘         └──────────────────┘
+```
+
+Research reports explore. Articles argue.
+
+The article needs a singular perspective, a clear throughline that everything else supports. But that doesn't mean one narrow point. Multiple angles, examples, and sections all contribute to the main narrative. They reinforce the perspective from different directions.
+
+Think of it like a legal case: one argument, many pieces of evidence.
+
+---
+
+### Sentence Rhythm and Cadence
+
+Good writing has a beat. It's not monotonous. You vary the length.
+
+Some sentences are short. They punch.
+
+Others need room to breathe, to unfold across a longer structure that lets a more complex thought develop naturally before landing on its point.
+
+**The principle:** Alternate. Don't string together five sentences of identical length. Don't make every sentence complex. Mix it up. Let short sentences carry weight after longer ones. Let longer sentences provide context before a short one drives it home.
+
+**Read it aloud.** If you run out of breath, the sentence is too long. If it sounds like a robot reciting bullet points, add some flow.
+
+| Pattern | Effect |
+|---------|--------|
+| Short after long | Creates emphasis, drives point home |
+| Long after short | Provides context, explains the punch |
+| Three shorts in a row | Builds urgency, creates staccato rhythm |
+| Sustained long sentences | Slows pace, adds contemplation |
+
+The goal isn't following rules. It's making the writing feel alive.
+
+---
+
+### Avoiding AI Writing Patterns
+
+AI has tells. These patterns make writing feel synthetic even when the ideas are good. Actively avoid them.
+
+**The em-dash epidemic**
+
+AI loves em-dashes. It inserts them constantly. This has become such a well-known tell that readers now pattern-match "em-dash heavy" to "AI-generated."
+
+```
+BAD:  The problem isn't technical—it's organizational.
+BAD:  We tried everything—caching, indexing, sharding—nothing worked.
+BAD:  This approach—while unconventional—solved our issue.
+
+GOOD: The problem isn't technical. It's organizational.
+GOOD: We tried caching, indexing, sharding. Nothing worked.
+GOOD: The approach was unconventional, but it solved our issue.
+```
+
+Use em-dashes sparingly, if at all. Periods, commas, and "but" accomplish the same thing without the AI smell.
+
+**The contrast cliché**
+
+AI constantly writes "it's not X, it's Y" or "X isn't Y—it's Z." This structure is now a dead giveaway.
+
+```
+BAD:  Ramp isn't demonstrating a toy—they're showing production infrastructure.
+BAD:  The real story isn't the agent. It's what the approach reveals.
+BAD:  This isn't about speed—it's about control.
+
+GOOD: Ramp moved past the toy phase. This is production infrastructure.
+GOOD: The agent itself matters less than what Ramp's approach reveals.
+GOOD: Speed matters, but control matters more.
+```
+
+Find other ways to make contrasts. Use "but." Use separate sentences. Reframe entirely.
+
+**Vocabulary AI overuses**
+
+These words appear constantly in AI output and rarely in natural human writing:
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| delve | Massively overused since 2023 | dig into, explore, examine |
+| tapestry | AI's favorite metaphor for complexity | mix, web, combination |
+| landscape | AI's favorite opening word | space, world, field |
+| unlock | AI loves this verb | enable, open up, make possible |
+| unveil | Theatrical and overused | show, reveal, introduce |
+| foster | Formal and stiff | encourage, build, grow |
+| leverage | Corporate AI speak | use |
+| realm | Fantasy novel energy | area, space, domain |
+| multifaceted | AI's way of saying "complex" | complex, complicated, layered |
+| underscores | AI's favorite way to say "shows" | shows, highlights, proves |
+
+If you catch yourself using these, pause. Find a simpler word.
+
+**Structural patterns to avoid**
+
+- Starting with "In today's [X]" or "In the world of [X]"
+- "It's important to note that..."
+- "Let's dive in" or "Let's explore"
+- Lists of exactly three examples when two or four would be more natural
+- Every paragraph being exactly the same length
+- Rhetorical questions that answer themselves immediately
+
+---
+
+### Writing With Personal Voice
+
+The article should sound like it came from a person with opinions, experiences, and a specific point of view. That person is you.
+
+**First person is fine.** "I've seen this fail" hits harder than "This often fails." Use "I" when you have direct experience. Use "we" when describing shared industry experiences.
+
+**Include specifics from your experience.** Not "teams struggle with X" but "I watched three teams struggle with X last year." Not "this approach works" but "we shipped this approach and it cut our costs 40%."
+
+**Have opinions.** Research reports can be balanced. Articles should take stances. "Both approaches have merit" is boring. "Approach A is better for most teams, and here's why" is interesting.
+
+**Acknowledge uncertainty honestly.** "I'm not sure about this, but..." is more human than hedging with weasel words. Admit what you don't know directly rather than hiding it in qualifications.
+
+**Let personality through.** Mild frustration, enthusiasm, humor when appropriate. The writing should have temperature, not be room-temperature neutral.
+
+---
+
+### The Vibe Check for Articles
+
+Before publishing, run through this:
+
+1. **Read it aloud.** Does it sound like you talking? Or like a press release?
+2. **Check sentence variety.** Do you have a mix of short and long? Or all medium?
+3. **Search for em-dashes.** Can you replace most of them with periods or commas?
+4. **Search for "it's not X, it's Y."** Rewrite any instances.
+5. **Search for the AI vocabulary list.** Replace offenders.
+6. **Find your "I" statements.** Are there enough? Do they feel authentic?
+7. **Identify the perspective.** Can you state it in one sentence? Do all sections support it?
+8. **Cut the throat-clearing.** Does the piece get to the point quickly?
+
+If it passes, it's ready.
