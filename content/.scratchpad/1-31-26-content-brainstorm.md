@@ -23,3 +23,25 @@ A prompt is like a harness. The AI does only what you tell it to do. It moves in
 Which means moltbook is just humans talking to each other through their AIs. Like letting their robot dogs on a leash bark at each other in the park.
 
 The prompt is the leash, the robot dogs have an off switch, and it all stops as soon as you hit a button. Loud barking is just not a robot uprising.
+
+-----
+
+Claude Code Playgrounds:
+
+Break them down, write an article about how they can be useful in a specific workflow / workflows like a guide on how to use them / why they are significant. With enough source material/other tweets to reference it can probably be several articles worth of content. 
+
+https://x.com/omarsar0/status/2017296558169952517?s=20
+
+-----
+
+The PARA method, how to organize your digital life: https://fortelabs.com/blog/para/
+
+Agentic personal knowledge management: https://x.com/nateliason/status/2017636775347331276?s=20
+
+-----
+
+QMD for faster / better searching, comparing vector search, agentic search, different grepping strategies, etc. and make a post on when to use what kind and what the est available are
+
+Agentic personal knowledge management: https://x.com/nateliason/status/2017636775347331276?s=20
+
+-----
