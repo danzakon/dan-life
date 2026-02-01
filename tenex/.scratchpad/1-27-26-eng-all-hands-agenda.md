@@ -68,7 +68,23 @@ High-level discussion on how things become standards.
 
 ---
 
-## 5. Open Forum
+## 5. Feedback & Scorecard System Debut
+
+Introducing the new feedback and scorecard system that we'll be using going forward.
+
+**Key points:**
+- Overview of the scorecard structure
+- How feedback will be collected and delivered
+- Cadence and expectations
+
+- [ ] Walk through the scorecard template
+- [ ] Explain the review process
+- [ ] Set expectations for participation
+- [ ] Q&A on the system
+
+---
+
+## 6. Open Forum
 
 Floor is open for:
 - Demos
