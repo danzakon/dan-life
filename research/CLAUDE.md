@@ -90,6 +90,18 @@ Before diving deep, get the lay of the land:
 
 This phase builds a mental map before committing to specific angles.
 
+**Source-Specific Tools:**
+
+| Source | Tool |
+|--------|------|
+| Web (default) | `mcp__exa__web_search_exa` |
+| X/Twitter | `/xquery` skill - use when explicitly asked for X as a source |
+
+When instructed to use X/Twitter for sources, invoke the xquery skill:
+- `xquery "topic"` - Ask Grok with live X search (interpreted answer)
+- `xquery x:search "topic"` - Get raw tweets with metrics
+- `xquery x:user @handle` - Get user info and recent tweets
+
 ### Phase 2: Identify Research Angles
 
 Based on preliminary findings, generate 3-5 interesting research angles:
