@@ -10,7 +10,7 @@ AI got dramatically better this year. And somehow, the average quality of AI-ass
 
 That sounds contradictory. It isn't. The better AI gets, the more tempting it is to do less. To type a one-line prompt, accept the first output, and ship it. The tool improved. The human in the loop got lazy.
 
-Here's the thing nobody wants to hear: if you paste an AI-generated document into an email, a codebase, a report, a legal brief, or a blog post, and it's wrong, shallow, or embarrassing, that's on you. Not the model. Not the prompt. You. You clicked send.
+Here's the thing nobody wants to hear: if you paste an AI-generated document into an email, a codebase, a report, a legal brief, and it's wrong, shallow, or embarrassing, that's on you. Not the model. Not the prompt. You. You clicked send.
 
 The AI didn't publish that hallucinated statistic. You did. The AI didn't ship that buggy function without reading it. You did. The AI didn't send that proposal full of generic platitudes to your client. You did.
 
