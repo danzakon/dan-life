@@ -33,7 +33,7 @@ The scorecard reflects what actually predicts success in a client-facing, fast-m
 |-----------|------------------|
 | **Delivery** | Gets things done reliably and on time |
 | **Communication** | Surfaces issues early, with clients and team |
-| **Ownership** | Self-directed problem solver |
+| **Judgment** | Scopes well, solves problems independently, finds the right-sized solution |
 | **Craft** | Technical quality and process rigor |
 | **Capacity** | Managing load, sustainability |
 
@@ -67,17 +67,17 @@ The scorecard reflects what actually predicts success in a client-facing, fast-m
 
 ---
 
-## Dimension 3: Ownership
+## Dimension 3: Judgment
 
-**What it measures:** Self-direction and independent problem-solving.
+**What it measures:** Ability to scope work appropriately, solve problems independently, and find the right-sized solution.
 
 | Level | Behaviors |
 |-------|-----------|
-| **Struggling (1-2)** | Needs detailed instructions to start work. Gets stuck and waits rather than seeking solutions. Asks questions that could be answered with 5 minutes of research. Defaults to "what should I do?" rather than "here's what I'm thinking." |
-| **Meeting (3)** | Takes initiative on assigned work without hand-holding. Researches problems independently before escalating. Proposes solutions, not just problems. Follows through on commitments without reminders. |
-| **Excelling (4-5)** | Identifies work that needs doing and does it without being asked. Takes ownership of outcomes, not just tasks. When something falls through the cracks, they catch it. Acts like an owner of the project, not a task executor. |
+| **Struggling (1-2)** | Over-engineers solutions or builds the wrong thing entirely. Needs detailed instructions to start work. Gets stuck and waits rather than seeking solutions. Can't distinguish between what matters and what doesn't—treats every task as equally important. Adds complexity without clear value. |
+| **Meeting (3)** | Breaks problems into reasonable chunks and tackles them in priority order. Researches problems independently before escalating. Proposes solutions, not just problems. Knows when "good enough" is right and when to push for more. Scopes work to match the actual need, not the theoretical ideal. |
+| **Excelling (4-5)** | Consistently finds the simplest solution that fully solves the problem. Identifies work that needs doing and does it without being asked. Pushes back on scope when a smaller solution would serve the goal. Makes good trade-offs under uncertainty—comfortable deciding with incomplete information. Others seek their input on "should we build this?" questions. |
 
-**Key question:** Can I assign this person a problem (not a task) and trust they'll figure it out?
+**Key question:** Does this person consistently find the right-sized solution to problems?
 
 ---
 
@@ -186,7 +186,7 @@ Reward with visibility, interesting projects, and growth opportunities. Don't le
 
 The dimensions map to growth:
 - **Delivery + Craft**: Core competence, must be solid before advancement
-- **Communication + Ownership**: Leadership potential, scope expansion
+- **Communication + Judgment**: Leadership potential, scope expansion
 - **Capacity**: Sustainability, readiness for more responsibility
 
 Someone who's 5/5 on Delivery and Craft but 2/2 on Communication and Ownership isn't ready for senior roles, even if their code is excellent.
@@ -201,4 +201,4 @@ Someone who's 5/5 on Delivery and Craft but 2/2 on Communication and Ownership i
 | High Delivery, Low Craft | Cutting corners, technical debt accumulation |
 | Low Communication across the board | Disengagement, fear, unclear expectations |
 | Declining Capacity over months | Burnout trajectory, unsustainable assignment |
-| High Ownership, Low Delivery | Overcommitted, saying yes to too much |
+| High Judgment, Low Delivery | Analysis paralysis, or scoping well but not executing |
