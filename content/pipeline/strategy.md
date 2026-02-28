@@ -15,6 +15,18 @@ These blend into each other and will evolve. Not rigid categories.
 
 ---
 
+## Political Neutrality
+
+Stay politically neutral. Readers should not be able to guess which party or candidate I support.
+
+- **No partisan signals** -- Never endorse, attack, or align with specific candidates, parties, or political movements.
+- **No culture war content** -- Avoid content that reads as left-coded or right-coded on social/cultural issues.
+- **Tech-adjacent policy is fair game** -- AI regulation, open-source policy, immigration for tech talent, etc. Take stances on these through the lens of technology and engineering, not party affiliation.
+- **Geopolitics only through a tech lens** -- AI chip export controls, global AI competition, etc. Frame as industry analysis, not political commentary.
+- **When in doubt, skip it** -- If a take could be screenshot-clipped and used to paint you as politically aligned, don't post it.
+
+---
+
 ## Platform Tone
 
 **Twitter/X**

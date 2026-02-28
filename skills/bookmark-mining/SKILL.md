@@ -30,16 +30,28 @@ This returns recent bookmarks with tweet text, author, URLs, and engagement metr
 
 If `x:bookmarks` is not available yet (OAuth not configured), fall back to asking the user to paste bookmark URLs or use browser to manually check bookmarks.
 
-### Step 2: Analyze Content
+### Step 2: Filter Political Content
 
-For each bookmark, identify:
+Before analyzing, filter out bookmarks that are **purely political** — partisan takes, culture war content, candidate/party commentary, policy debates unrelated to tech. These have zero content potential for our purposes.
+
+If the majority of bookmarks in a batch are political (more than ~60%), **automatically paginate** and fetch the next batch:
+
+```bash
+xquery x:bookmarks --limit 50 --next-token <token>
+```
+
+Keep paginating (up to 3 pages) until you have at least 10 non-political bookmarks to work with. If a bookmark touches politics but has a genuine tech/AI/engineering angle (AI regulation, open-source policy, tech industry impact), keep it — the content angle should be the tech lens, not the political one.
+
+### Step 3: Analyze Content
+
+For each remaining bookmark, identify:
 
 - **Topic**: What is it about?
 - **Content type**: Take/opinion, data/research, tool/product, news, tutorial
 - **Engagement signals**: High likes/reposts suggest resonance
 - **URLs**: Does it link to an article or resource worth reading deeper?
 
-### Step 3: Fetch Linked Content (Optional)
+### Step 4: Fetch Linked Content (Optional)
 
 For bookmarks with interesting URLs, optionally fetch the linked content:
 
@@ -47,7 +59,7 @@ For bookmarks with interesting URLs, optionally fetch the linked content:
 - Use WebFetch for specific article URLs
 - This adds depth for bookmarks that are just link-shares
 
-### Step 4: Group and Rank
+### Step 5: Group and Rank
 
 Group bookmarks by theme/topic. Rank by content potential:
 
@@ -55,7 +67,7 @@ Group bookmarks by theme/topic. Rank by content potential:
 - **Medium potential**: Interesting but common knowledge, or already widely discussed
 - **Low potential**: Personal/tangential, no clear content angle
 
-### Step 5: Present Candidates
+### Step 6: Present Candidates
 
 Show the top 5-8 bookmarks with highest content potential:
 
@@ -71,7 +83,7 @@ Show the top 5-8 bookmarks with highest content potential:
 ### 2. ...
 ```
 
-### Step 6: User Chooses
+### Step 7: User Chooses
 
 Ask: "Which of these should I work with? Options:"
 
@@ -80,7 +92,7 @@ Ask: "Which of these should I work with? Options:"
 - **Research first**: Suggest running the `research` skill to go deeper before creating content
 - **Skip**: Move on
 
-### Step 7: Execute
+### Step 8: Execute
 
 Based on user choice, delegate to the appropriate skill with the bookmark context as input.
 
