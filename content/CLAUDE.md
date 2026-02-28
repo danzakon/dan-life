@@ -191,23 +191,41 @@ Content that performs isn't just informative—it makes people feel something.
 
 ## Workflow
 
+See [pipeline/README.md](pipeline/README.md) for the full content pipeline system, including all skills, automation, and scheduling.
+
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│ .scratchpad │────▶│   drafts/   │────▶│ published/  │
-│  (ideation) │     │  (writing)  │     │   (live)    │
-└─────────────┘     └─────────────┘     └─────────────┘
-       │                                       │
-       │            ┌─────────────┐            │
-       └───────────▶│   posts/    │◀───────────┘
-                    │  (weekly)   │
-                    └─────────────┘
+Capture -> Create -> Review -> Queue -> Schedule -> Publish -> Track
 ```
 
-1. **Capture** — Drop raw ideas in `.scratchpad/`
-2. **Develop** — Flesh out the idea, find the angle
-3. **Write** — Draft in `articles/drafts/` or current week's `posts/` file
-4. **Vibe check** — Read it out loud. Does it sound like you?
-5. **Publish** — Post and update status/checkbox. Move articles to `published/`
+1. **Capture** — Quick thoughts via `capture-thought` skill -> monthly thought-bank files in `.scratchpad/`. Bookmark mining via `bookmark-mining` skill. Research via `research` skill.
+2. **Create** — Convert inputs to content using `research-to-posts`, `thought-to-post`, or `research-to-article` skills. All follow the tone/voice rules below.
+3. **Review** — Edit drafts in `posts/` weekly files or `articles/drafts/`.
+4. **Queue** — Approved posts go to `pipeline/queue.md` with target dates and platform variants.
+5. **Schedule** — Daily Cowork task reads queue, dedup-checks, schedules via PostBridge API.
+6. **Publish** — PostBridge handles posts. Articles staged for X Articles by weekly Cowork task.
+7. **Track** — Everything logged to `pipeline/history.md`.
+
+### Key Files
+
+- `pipeline/strategy.md` — Content themes, hot topics, cadence, Tenex messaging
+- `pipeline/queue.md` — Posts ready for scheduling
+- `pipeline/history.md` — Published content log (dedup database)
+- `.scratchpad/thought-bank-YYYY-MM.md` — Monthly thought capture
+
+### Skills
+
+All in `life/skills/`, symlinked to agent directories via `skills/sync.sh`:
+
+| Skill | Purpose |
+|-------|---------|
+| `capture-thought` | Quick thought capture into monthly thought-bank |
+| `content-pipeline` | Pipeline orchestration (delegates to other skills) |
+| `research-to-posts` | Research report -> 5-10 platform-targeted posts |
+| `thought-to-post` | Raw thought -> polished post with variants |
+| `research-to-article` | Research -> long-form article draft |
+| `article-thumbnail` | Article image generation (1200x675) |
+| `bookmark-mining` | X bookmark ingestion + content ideas |
+| `postbridge` | PostBridge API scheduling |
 
 ---
 
@@ -218,6 +236,7 @@ Content that performs isn't just informative—it makes people feel something.
 - Tech leadership without the fluff
 - Industry trends and honest commentary
 - Things I got wrong and what I learned
+- Tenex hiring, culture, and positioning
 
 ---
 

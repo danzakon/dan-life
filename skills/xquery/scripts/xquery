@@ -1,0 +1,471 @@
+#!/usr/bin/env python3
+"""xquery - Query Grok and X API from the command line."""
+
+import argparse
+import json
+import os
+import sys
+import urllib.request
+import urllib.error
+from pathlib import Path
+from urllib.parse import urlencode, quote
+
+CONFIG_DIR = Path.home() / ".config" / "xquery"
+CONFIG_FILE = CONFIG_DIR / ".env"
+
+# API endpoints
+XAI_API_URL = "https://api.x.ai/v1/responses"
+X_API_URL = "https://api.twitter.com/2"
+
+DEFAULT_MODEL = "grok-4"
+USER_AGENT = "xquery/1.0 (Claude Code Skill)"
+
+
+def load_config() -> dict:
+    """Load API keys from config file or environment."""
+    config = {}
+
+    # Load from file first
+    if CONFIG_FILE.exists():
+        with open(CONFIG_FILE) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    key, _, value = line.partition("=")
+                    key, value = key.strip(), value.strip()
+                    # Remove quotes if present
+                    if value and value[0] in ("'", '"') and value[-1] == value[0]:
+                        value = value[1:-1]
+                    if key and value:
+                        config[key] = value
+
+    # Environment variables override file
+    config["XAI_API_KEY"] = os.environ.get("XAI_API_KEY") or config.get("XAI_API_KEY")
+    config["XAI_MODEL"] = os.environ.get("XAI_MODEL") or config.get("XAI_MODEL", DEFAULT_MODEL)
+    config["X_BEARER_TOKEN"] = os.environ.get("X_BEARER_TOKEN") or config.get("X_BEARER_TOKEN")
+
+    return config
+
+
+# =============================================================================
+# Grok (xAI) API Functions
+# =============================================================================
+
+def query_grok(api_key: str, model: str, prompt: str, use_x_search: bool = True) -> dict:
+    """Send a query to Grok and return the response."""
+    payload = {
+        "model": model,
+        "input": [{"role": "user", "content": prompt}],
+    }
+
+    if use_x_search:
+        payload["tools"] = [{"type": "x_search"}]
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "User-Agent": USER_AGENT,
+    }
+
+    req = urllib.request.Request(
+        XAI_API_URL,
+        data=json.dumps(payload).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8") if e.fp else ""
+        return {"error": {"code": e.code, "message": error_body}}
+    except urllib.error.URLError as e:
+        return {"error": {"message": str(e.reason)}}
+
+
+def extract_grok_text(response: dict) -> str:
+    """Extract the text content from Grok's response."""
+    if response.get("error"):
+        err = response["error"]
+        msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
+        return f"Error: {msg}"
+
+    output = response.get("output", [])
+    if isinstance(output, str):
+        return output
+
+    for item in output:
+        if not isinstance(item, dict):
+            continue
+        if item.get("type") == "message":
+            for content in item.get("content", []):
+                if isinstance(content, dict) and content.get("type") == "output_text":
+                    return content.get("text", "")
+        if "text" in item:
+            return item["text"]
+
+    for choice in response.get("choices", []):
+        if "message" in choice:
+            return choice["message"].get("content", "")
+
+    return "No response text found"
+
+
+# =============================================================================
+# X (Twitter) API Functions
+# =============================================================================
+
+def x_api_request(token: str, endpoint: str, params: dict = None) -> dict:
+    """Make a request to the X API v2."""
+    url = f"{X_API_URL}/{endpoint}"
+    if params:
+        url += "?" + urlencode(params)
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "User-Agent": USER_AGENT,
+    }
+
+    req = urllib.request.Request(url, headers=headers)
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8") if e.fp else ""
+        try:
+            return json.loads(error_body)
+        except json.JSONDecodeError:
+            return {"error": {"code": e.code, "message": error_body}}
+    except urllib.error.URLError as e:
+        return {"error": {"message": str(e.reason)}}
+
+
+def x_search(
+    token: str,
+    query: str,
+    limit: int = 10,
+    include_retweets: bool = False,
+    include_replies: bool = False,
+) -> dict:
+    """Search recent tweets (last 7 days).
+
+    Args:
+        token: X API bearer token
+        query: Search query
+        limit: Max results (10-100)
+        include_retweets: Include retweets (default False)
+        include_replies: Include replies (default False)
+
+    Results are sorted by relevancy (engagement-weighted).
+    """
+    # Build query with filters
+    filters = []
+    if not include_retweets:
+        filters.append("-is:retweet")
+    if not include_replies:
+        filters.append("-is:reply")
+
+    search_query = query
+    if filters:
+        search_query = f"{query} {' '.join(filters)}"
+
+    params = {
+        "query": search_query,
+        "max_results": min(max(limit, 10), 100),  # API requires 10-100
+        "tweet.fields": "created_at,public_metrics,author_id,conversation_id,text",
+        "expansions": "author_id",
+        "user.fields": "name,username,verified,public_metrics",
+        "sort_order": "relevancy",  # relevancy or recency
+    }
+    return x_api_request(token, "tweets/search/recent", params)
+
+
+def x_user_lookup(token: str, username: str) -> dict:
+    """Look up a user by username."""
+    username = username.lstrip("@")
+    params = {
+        "user.fields": "created_at,description,public_metrics,verified,profile_image_url",
+    }
+    return x_api_request(token, f"users/by/username/{username}", params)
+
+
+def x_user_tweets(token: str, user_id: str, limit: int = 10) -> dict:
+    """Get a user's recent tweets."""
+    params = {
+        "max_results": min(max(limit, 5), 100),
+        "tweet.fields": "created_at,public_metrics,conversation_id",
+        "exclude": "retweets,replies",
+    }
+    return x_api_request(token, f"users/{user_id}/tweets", params)
+
+
+def x_tweet_lookup(token: str, tweet_id: str) -> dict:
+    """Look up a specific tweet by ID."""
+    params = {
+        "tweet.fields": "created_at,public_metrics,author_id,conversation_id,context_annotations",
+        "expansions": "author_id",
+        "user.fields": "name,username,verified",
+    }
+    return x_api_request(token, f"tweets/{tweet_id}", params)
+
+
+def format_x_search_results(response: dict) -> str:
+    """Format X search results for display."""
+    if "error" in response or "errors" in response:
+        errors = response.get("errors", [response.get("error", {})])
+        messages = [e.get("message", e.get("detail", str(e))) for e in errors]
+        return f"Error: {'; '.join(messages)}"
+
+    data = response.get("data", [])
+    if not data:
+        return "No tweets found."
+
+    # Build user lookup from includes
+    users = {}
+    for user in response.get("includes", {}).get("users", []):
+        users[user["id"]] = user
+
+    lines = []
+    for tweet in data:
+        author = users.get(tweet.get("author_id"), {})
+        username = author.get("username", "unknown")
+        name = author.get("name", "")
+        metrics = tweet.get("public_metrics", {})
+        likes = metrics.get("like_count", 0)
+        retweets = metrics.get("retweet_count", 0)
+        replies = metrics.get("reply_count", 0)
+
+        text = tweet.get("text", "").replace("\n", " ")
+
+        lines.append(f"@{username} ({name})")
+        lines.append(f"  {text}")
+        lines.append(f"  [{likes} likes, {retweets} RTs, {replies} replies]")
+        lines.append("")
+
+    meta = response.get("meta", {})
+    count = meta.get("result_count", len(data))
+    lines.append(f"--- {count} tweets ---")
+
+    return "\n".join(lines)
+
+
+def format_x_user(response: dict) -> str:
+    """Format X user info for display."""
+    if "error" in response or "errors" in response:
+        errors = response.get("errors", [response.get("error", {})])
+        messages = [e.get("message", e.get("detail", str(e))) for e in errors]
+        return f"Error: {'; '.join(messages)}"
+
+    user = response.get("data", {})
+    if not user:
+        return "User not found."
+
+    metrics = user.get("public_metrics", {})
+    verified = " [verified]" if user.get("verified") else ""
+
+    lines = [
+        f"@{user.get('username', 'unknown')}{verified}",
+        f"Name: {user.get('name', '')}",
+        f"Bio: {user.get('description', 'No bio')}",
+        f"Followers: {metrics.get('followers_count', 0):,}",
+        f"Following: {metrics.get('following_count', 0):,}",
+        f"Tweets: {metrics.get('tweet_count', 0):,}",
+        f"Joined: {user.get('created_at', 'unknown')[:10]}",
+    ]
+
+    return "\n".join(lines)
+
+
+def format_x_tweet(response: dict) -> str:
+    """Format a single tweet for display."""
+    if "error" in response or "errors" in response:
+        errors = response.get("errors", [response.get("error", {})])
+        messages = [e.get("message", e.get("detail", str(e))) for e in errors]
+        return f"Error: {'; '.join(messages)}"
+
+    tweet = response.get("data", {})
+    if not tweet:
+        return "Tweet not found."
+
+    users = {}
+    for user in response.get("includes", {}).get("users", []):
+        users[user["id"]] = user
+
+    author = users.get(tweet.get("author_id"), {})
+    metrics = tweet.get("public_metrics", {})
+
+    lines = [
+        f"@{author.get('username', 'unknown')} ({author.get('name', '')})",
+        f"",
+        tweet.get("text", ""),
+        f"",
+        f"Posted: {tweet.get('created_at', 'unknown')}",
+        f"Likes: {metrics.get('like_count', 0):,} | "
+        f"RTs: {metrics.get('retweet_count', 0):,} | "
+        f"Replies: {metrics.get('reply_count', 0):,} | "
+        f"Quotes: {metrics.get('quote_count', 0):,}",
+    ]
+
+    return "\n".join(lines)
+
+
+# =============================================================================
+# Main
+# =============================================================================
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Query Grok (xAI) or X API directly",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Grok Queries (default):
+  xquery "What's trending in AI?"
+  xquery --no-x-search "Explain transformers"
+
+Direct X API Commands:
+  xquery x:search "Claude Code"           # Sorted by relevancy
+  xquery x:search "Claude Code" --all     # Include RTs and replies
+  xquery x:user @elonmusk
+  xquery x:tweet 1234567890123456789
+
+Options:
+  --json             Raw JSON output
+  --limit N          Number of results (default: 10)
+  --include-rts      Include retweets
+  --include-replies  Include replies
+  --all              Include both RTs and replies
+
+Config: ~/.config/xquery/.env
+  XAI_API_KEY=xai-...       # For Grok queries
+  X_BEARER_TOKEN=AAAA...    # For direct X API
+""",
+    )
+    parser.add_argument("prompt", nargs="*", help="Query or x:command")
+    parser.add_argument("--no-x-search", action="store_true", help="Disable Grok's X search")
+    parser.add_argument("--json", action="store_true", help="Output raw JSON")
+    parser.add_argument("--model", help=f"Grok model (default: {DEFAULT_MODEL})")
+    parser.add_argument("--limit", type=int, default=10, help="Results limit for X API")
+    parser.add_argument("--include-rts", action="store_true", help="Include retweets in x:search")
+    parser.add_argument("--include-replies", action="store_true", help="Include replies in x:search")
+    parser.add_argument("--all", action="store_true", help="Include retweets and replies")
+    args = parser.parse_args()
+
+    # Handle stdin or join args
+    if args.prompt and args.prompt[0] == "-":
+        prompt = sys.stdin.read().strip()
+    elif not args.prompt and not sys.stdin.isatty():
+        prompt = sys.stdin.read().strip()
+    elif args.prompt:
+        prompt = " ".join(args.prompt)
+    else:
+        prompt = ""
+
+    if not prompt:
+        parser.print_help()
+        sys.exit(1)
+
+    config = load_config()
+
+    # Check for X API direct commands
+    if prompt.startswith("x:"):
+        parts = prompt.split(None, 1)
+        command = parts[0].lower()
+        arg = parts[1] if len(parts) > 1 else ""
+
+        token = config.get("X_BEARER_TOKEN")
+        if not token:
+            sys.stderr.write("Error: X_BEARER_TOKEN not configured.\n\n")
+            sys.stderr.write("Get a Bearer Token at developer.x.com (Basic tier: $100/mo)\n")
+            sys.stderr.write(f"Add to {CONFIG_FILE}:\n")
+            sys.stderr.write("  X_BEARER_TOKEN=AAAA...\n")
+            sys.exit(1)
+
+        if command == "x:search":
+            if not arg:
+                sys.stderr.write("Usage: xquery x:search \"query\"\n")
+                sys.exit(1)
+
+            # Handle --all flag (no filters)
+            include_rts = True if args.all else args.include_rts
+            include_replies = True if args.all else args.include_replies
+
+            response = x_search(
+                token, arg, args.limit,
+                include_retweets=include_rts,
+                include_replies=include_replies,
+            )
+            if args.json:
+                print(json.dumps(response, indent=2))
+            else:
+                print(format_x_search_results(response))
+
+        elif command == "x:user":
+            if not arg:
+                sys.stderr.write("Usage: xquery x:user @username\n")
+                sys.exit(1)
+            # Get user info
+            user_response = x_user_lookup(token, arg)
+            if args.json:
+                # Also fetch tweets if user found
+                if "data" in user_response:
+                    user_id = user_response["data"]["id"]
+                    tweets_response = x_user_tweets(token, user_id, args.limit)
+                    user_response["tweets"] = tweets_response
+                print(json.dumps(user_response, indent=2))
+            else:
+                print(format_x_user(user_response))
+                # Also show recent tweets
+                if "data" in user_response:
+                    user_id = user_response["data"]["id"]
+                    tweets_response = x_user_tweets(token, user_id, args.limit)
+                    tweets = tweets_response.get("data", [])
+                    if tweets:
+                        print(f"\nRecent tweets:")
+                        for t in tweets[:5]:
+                            text = t.get("text", "").replace("\n", " ")[:100]
+                            metrics = t.get("public_metrics", {})
+                            print(f"  - {text}...")
+                            print(f"    [{metrics.get('like_count', 0)} likes]")
+
+        elif command == "x:tweet":
+            if not arg:
+                sys.stderr.write("Usage: xquery x:tweet <tweet_id>\n")
+                sys.exit(1)
+            response = x_tweet_lookup(token, arg.strip())
+            if args.json:
+                print(json.dumps(response, indent=2))
+            else:
+                print(format_x_tweet(response))
+
+        else:
+            sys.stderr.write(f"Unknown command: {command}\n")
+            sys.stderr.write("Available: x:search, x:user, x:tweet\n")
+            sys.exit(1)
+
+        return
+
+    # Default: Grok query
+    api_key = config.get("XAI_API_KEY")
+    if not api_key:
+        sys.stderr.write("Error: XAI_API_KEY not configured.\n\n")
+        sys.stderr.write(f"Add to {CONFIG_FILE}:\n")
+        sys.stderr.write("  XAI_API_KEY=xai-your-key\n")
+        sys.exit(1)
+
+    model = args.model or config.get("XAI_MODEL", DEFAULT_MODEL)
+    use_x_search = not args.no_x_search
+
+    response = query_grok(api_key, model, prompt, use_x_search)
+
+    if args.json:
+        print(json.dumps(response, indent=2))
+    else:
+        print(extract_grok_text(response))
+
+
+if __name__ == "__main__":
+    main()
