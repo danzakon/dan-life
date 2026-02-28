@@ -2,20 +2,34 @@
 """xquery - Query Grok and X API from the command line."""
 
 import argparse
+import base64
+import hashlib
+import http.server
 import json
 import os
+import secrets
 import sys
+import threading
+import time
 import urllib.request
 import urllib.error
+import webbrowser
 from pathlib import Path
-from urllib.parse import urlencode, quote
+from urllib.parse import urlencode, quote, parse_qs, urlparse
 
 CONFIG_DIR = Path.home() / ".config" / "xquery"
 CONFIG_FILE = CONFIG_DIR / ".env"
+OAUTH_TOKEN_FILE = CONFIG_DIR / ".oauth_token.json"
 
 # API endpoints
 XAI_API_URL = "https://api.x.ai/v1/responses"
 X_API_URL = "https://api.twitter.com/2"
+X_AUTH_URL = "https://twitter.com/i/oauth2/authorize"
+X_TOKEN_URL = "https://api.twitter.com/2/oauth2/token"
+
+OAUTH_CALLBACK_PORT = 8742
+OAUTH_REDIRECT_URI = f"http://localhost:{OAUTH_CALLBACK_PORT}/callback"
+OAUTH_SCOPES = "bookmark.read tweet.read users.read offline.access"
 
 DEFAULT_MODEL = "grok-4"
 USER_AGENT = "xquery/1.0 (Claude Code Skill)"
@@ -45,8 +59,171 @@ def load_config() -> dict:
     config["XAI_API_KEY"] = os.environ.get("XAI_API_KEY") or config.get("XAI_API_KEY")
     config["XAI_MODEL"] = os.environ.get("XAI_MODEL") or config.get("XAI_MODEL", DEFAULT_MODEL)
     config["X_BEARER_TOKEN"] = os.environ.get("X_BEARER_TOKEN") or config.get("X_BEARER_TOKEN")
+    config["X_CLIENT_ID"] = os.environ.get("X_CLIENT_ID") or config.get("X_CLIENT_ID")
+    config["X_USER_ID"] = os.environ.get("X_USER_ID") or config.get("X_USER_ID")
 
     return config
+
+
+# =============================================================================
+# OAuth 2.0 PKCE
+# =============================================================================
+
+def _generate_pkce_pair():
+    """Generate a PKCE code verifier and challenge."""
+    verifier = secrets.token_urlsafe(64)[:128]
+    digest = hashlib.sha256(verifier.encode("ascii")).digest()
+    challenge = base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+    return verifier, challenge
+
+
+def _save_oauth_token(token_data: dict):
+    """Persist OAuth token to disk."""
+    token_data["saved_at"] = int(time.time())
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    with open(OAUTH_TOKEN_FILE, "w") as f:
+        json.dump(token_data, f, indent=2)
+    OAUTH_TOKEN_FILE.chmod(0o600)
+
+
+def _load_oauth_token() -> dict | None:
+    """Load saved OAuth token, or None if absent."""
+    if not OAUTH_TOKEN_FILE.exists():
+        return None
+    with open(OAUTH_TOKEN_FILE) as f:
+        return json.load(f)
+
+
+def _refresh_oauth_token(client_id: str, refresh_token: str) -> dict:
+    """Exchange a refresh token for a new access token."""
+    body = urlencode({
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+        "client_id": client_id,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        X_TOKEN_URL,
+        data=body,
+        headers={"Content-Type": "application/x-www-form-urlencoded", "User-Agent": USER_AGENT},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _exchange_code(client_id: str, code: str, verifier: str) -> dict:
+    """Exchange authorization code for tokens."""
+    body = urlencode({
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": OAUTH_REDIRECT_URI,
+        "client_id": client_id,
+        "code_verifier": verifier,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        X_TOKEN_URL,
+        data=body,
+        headers={"Content-Type": "application/x-www-form-urlencoded", "User-Agent": USER_AGENT},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def get_oauth_access_token(config: dict) -> str:
+    """Return a valid OAuth 2.0 user access token, refreshing or authorizing as needed."""
+    client_id = config.get("X_CLIENT_ID")
+    if not client_id:
+        sys.stderr.write("Error: X_CLIENT_ID not configured.\n")
+        sys.stderr.write(f"Add to {CONFIG_FILE}:\n  X_CLIENT_ID=<your OAuth 2.0 Client ID>\n")
+        sys.exit(1)
+
+    token_data = _load_oauth_token()
+
+    if token_data:
+        expires_in = token_data.get("expires_in", 7200)
+        saved_at = token_data.get("saved_at", 0)
+        if time.time() < saved_at + expires_in - 300:
+            return token_data["access_token"]
+
+        refresh = token_data.get("refresh_token")
+        if refresh:
+            try:
+                sys.stderr.write("Refreshing OAuth token...\n")
+                new_data = _refresh_oauth_token(client_id, refresh)
+                _save_oauth_token(new_data)
+                return new_data["access_token"]
+            except Exception as e:
+                sys.stderr.write(f"Refresh failed ({e}), re-authorizing...\n")
+
+    return _authorize_interactive(client_id)
+
+
+def _authorize_interactive(client_id: str) -> str:
+    """Run the full PKCE authorization flow with a local callback server."""
+    verifier, challenge = _generate_pkce_pair()
+    state = secrets.token_urlsafe(32)
+
+    auth_params = urlencode({
+        "response_type": "code",
+        "client_id": client_id,
+        "redirect_uri": OAUTH_REDIRECT_URI,
+        "scope": OAUTH_SCOPES,
+        "state": state,
+        "code_challenge": challenge,
+        "code_challenge_method": "S256",
+    })
+    auth_url = f"{X_AUTH_URL}?{auth_params}"
+
+    result = {"code": None, "error": None}
+
+    class CallbackHandler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            qs = parse_qs(urlparse(self.path).query)
+            if qs.get("state", [None])[0] != state:
+                result["error"] = "State mismatch"
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(b"State mismatch. Try again.")
+                return
+            if "error" in qs:
+                result["error"] = qs["error"][0]
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(f"Error: {qs['error'][0]}".encode())
+                return
+            result["code"] = qs.get("code", [None])[0]
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"Authorization successful! You can close this tab.")
+
+        def log_message(self, format, *a):
+            pass
+
+    server = http.server.HTTPServer(("127.0.0.1", OAUTH_CALLBACK_PORT), CallbackHandler)
+    server.timeout = 120
+
+    sys.stderr.write("\nOpening browser for X authorization...\n")
+    sys.stderr.write(f"If it doesn't open, visit:\n{auth_url}\n\n")
+    webbrowser.open(auth_url)
+
+    server.handle_request()
+    server.server_close()
+
+    if result["error"]:
+        sys.stderr.write(f"Authorization error: {result['error']}\n")
+        sys.exit(1)
+    if not result["code"]:
+        sys.stderr.write("No authorization code received.\n")
+        sys.exit(1)
+
+    sys.stderr.write("Exchanging code for token...\n")
+    token_data = _exchange_code(client_id, result["code"], verifier)
+    _save_oauth_token(token_data)
+    sys.stderr.write("OAuth token saved.\n")
+    return token_data["access_token"]
 
 
 # =============================================================================
@@ -213,6 +390,86 @@ def x_tweet_lookup(token: str, tweet_id: str) -> dict:
     return x_api_request(token, f"tweets/{tweet_id}", params)
 
 
+def x_bookmarks(oauth_token: str, user_id: str, limit: int = 20, pagination_token: str = None) -> dict:
+    """Fetch the authenticated user's bookmarks."""
+    params = {
+        "max_results": min(max(limit, 1), 100),
+        "tweet.fields": "created_at,public_metrics,author_id,text,entities",
+        "expansions": "author_id",
+        "user.fields": "name,username,verified",
+    }
+    if pagination_token:
+        params["pagination_token"] = pagination_token
+
+    url = f"{X_API_URL}/users/{user_id}/bookmarks?{urlencode(params)}"
+    headers = {
+        "Authorization": f"Bearer {oauth_token}",
+        "User-Agent": USER_AGENT,
+    }
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8") if e.fp else ""
+        try:
+            return json.loads(error_body)
+        except json.JSONDecodeError:
+            return {"error": {"code": e.code, "message": error_body}}
+    except urllib.error.URLError as e:
+        return {"error": {"message": str(e.reason)}}
+
+
+def format_x_bookmarks(response: dict) -> str:
+    """Format bookmarked tweets for display."""
+    if "error" in response or "errors" in response:
+        errors = response.get("errors", [response.get("error", {})])
+        messages = [e.get("message", e.get("detail", str(e))) for e in errors]
+        return f"Error: {'; '.join(messages)}"
+
+    data = response.get("data", [])
+    if not data:
+        return "No bookmarks found."
+
+    users = {}
+    for user in response.get("includes", {}).get("users", []):
+        users[user["id"]] = user
+
+    lines = []
+    for i, tweet in enumerate(data, 1):
+        author = users.get(tweet.get("author_id"), {})
+        username = author.get("username", "unknown")
+        name = author.get("name", "")
+        metrics = tweet.get("public_metrics", {})
+        likes = metrics.get("like_count", 0)
+        retweets = metrics.get("retweet_count", 0)
+        created = tweet.get("created_at", "")[:10]
+
+        text = tweet.get("text", "").replace("\n", " ")
+
+        urls = []
+        for url_entity in (tweet.get("entities") or {}).get("urls", []):
+            expanded = url_entity.get("expanded_url", "")
+            if expanded and "twitter.com" not in expanded and "x.com" not in expanded:
+                urls.append(expanded)
+
+        lines.append(f"{i}. @{username} ({name}) — {created}")
+        lines.append(f"   {text}")
+        if urls:
+            lines.append(f"   Links: {', '.join(urls)}")
+        lines.append(f"   [{likes} likes, {retweets} RTs]")
+        lines.append("")
+
+    meta = response.get("meta", {})
+    count = meta.get("result_count", len(data))
+    next_token = meta.get("next_token")
+    lines.append(f"--- {count} bookmarks ---")
+    if next_token:
+        lines.append(f"(more available: --next-token {next_token})")
+
+    return "\n".join(lines)
+
+
 def format_x_search_results(response: dict) -> str:
     """Format X search results for display."""
     if "error" in response or "errors" in response:
@@ -331,6 +588,8 @@ Direct X API Commands:
   xquery x:search "Claude Code" --all     # Include RTs and replies
   xquery x:user @elonmusk
   xquery x:tweet 1234567890123456789
+  xquery x:bookmarks                      # Your recent bookmarks
+  xquery x:bookmarks --limit 50           # More bookmarks
 
 Options:
   --json             Raw JSON output
@@ -338,10 +597,13 @@ Options:
   --include-rts      Include retweets
   --include-replies  Include replies
   --all              Include both RTs and replies
+  --next-token TOK   Pagination token for x:bookmarks
 
 Config: ~/.config/xquery/.env
   XAI_API_KEY=xai-...       # For Grok queries
   X_BEARER_TOKEN=AAAA...    # For direct X API
+  X_CLIENT_ID=...           # For OAuth 2.0 (bookmarks)
+  X_USER_ID=...             # Your numeric X user ID
 """,
     )
     parser.add_argument("prompt", nargs="*", help="Query or x:command")
@@ -352,6 +614,7 @@ Config: ~/.config/xquery/.env
     parser.add_argument("--include-rts", action="store_true", help="Include retweets in x:search")
     parser.add_argument("--include-replies", action="store_true", help="Include replies in x:search")
     parser.add_argument("--all", action="store_true", help="Include retweets and replies")
+    parser.add_argument("--next-token", help="Pagination token for x:bookmarks")
     args = parser.parse_args()
 
     # Handle stdin or join args
@@ -441,9 +704,22 @@ Config: ~/.config/xquery/.env
             else:
                 print(format_x_tweet(response))
 
+        elif command == "x:bookmarks":
+            user_id = config.get("X_USER_ID")
+            if not user_id:
+                sys.stderr.write("Error: X_USER_ID not configured.\n")
+                sys.stderr.write(f"Add to {CONFIG_FILE}:\n  X_USER_ID=<your numeric user ID>\n")
+                sys.exit(1)
+            oauth_token = get_oauth_access_token(config)
+            response = x_bookmarks(oauth_token, user_id, args.limit, args.next_token)
+            if args.json:
+                print(json.dumps(response, indent=2))
+            else:
+                print(format_x_bookmarks(response))
+
         else:
             sys.stderr.write(f"Unknown command: {command}\n")
-            sys.stderr.write("Available: x:search, x:user, x:tweet\n")
+            sys.stderr.write("Available: x:search, x:user, x:tweet, x:bookmarks\n")
             sys.exit(1)
 
         return
