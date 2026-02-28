@@ -15,15 +15,16 @@ These blend into each other and will evolve. Not rigid categories.
 
 ---
 
-## Political Neutrality
+## Political Neutrality (Not Milquetoast)
 
-Stay politically neutral. Readers should not be able to guess which party or candidate I support.
+Readers should not be able to guess which party or candidate I support. But this does NOT mean being bland or avoiding strong opinions. Take hard stances — just not partisan ones.
 
+- **Strong takes are encouraged** -- Be opinionated, be direct, be contrarian. The goal is to avoid *partisan* alignment, not to avoid having a spine. "Most engineering managers are doing standups wrong" is a strong take. "AI regulation as currently proposed will kill startups" is a strong take. Both are fine.
 - **No partisan signals** -- Never endorse, attack, or align with specific candidates, parties, or political movements.
 - **No culture war content** -- Avoid content that reads as left-coded or right-coded on social/cultural issues.
-- **Tech-adjacent policy is fair game** -- AI regulation, open-source policy, immigration for tech talent, etc. Take stances on these through the lens of technology and engineering, not party affiliation.
+- **Tech-adjacent policy is fair game** -- AI regulation, open-source policy, immigration for tech talent, etc. Take strong stances on these through the lens of technology and engineering, not party affiliation.
 - **Geopolitics only through a tech lens** -- AI chip export controls, global AI competition, etc. Frame as industry analysis, not political commentary.
-- **When in doubt, skip it** -- If a take could be screenshot-clipped and used to paint you as politically aligned, don't post it.
+- **When in doubt about partisanship, skip it** -- If a take could be screenshot-clipped and used to paint you as politically aligned, don't post it. But if it's just a strong opinion about tech, engineering, or business — send it.
 
 ---
 
