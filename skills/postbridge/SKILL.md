@@ -11,22 +11,25 @@ allowed-tools:
 
 Autonomously manage social media posting via [Post Bridge](https://post-bridge.com) API.
 
-**Requirements:** `POST_BRIDGE_API_KEY` env var, `ffmpeg` installed.
+**Requirements:** `POST_BRIDGE_API_KEY` in `~/.config/postbridge/.env`, `ffmpeg` installed.
 
 ## Setup
 
 1. Create a Post Bridge account at [post-bridge.com](https://post-bridge.com)
-2. Connect your social accounts (TikTok, Instagram, YouTube, Twitter, etc.)
-3. Enable API access (Settings → API)
-4. Store your API key in workspace `.env`:
+2. Connect your social accounts (Twitter/X, LinkedIn, etc.)
+3. Enable API access ($5/mo add-on)
+4. API key is stored at `~/.config/postbridge/.env`:
    ```
    POST_BRIDGE_API_KEY=pb_live_xxxxx
    ```
-5. Download API docs: `https://api.post-bridge.com/reference` → save to workspace as `post-bridge-api.json`
 
 ## Auth
 
-All requests use Bearer token:
+Load the key from config, then use as Bearer token:
+```bash
+# Read key
+POST_BRIDGE_API_KEY=$(grep POST_BRIDGE_API_KEY ~/.config/postbridge/.env | cut -d= -f2)
+```
 ```
 Authorization: Bearer <POST_BRIDGE_API_KEY>
 ```
