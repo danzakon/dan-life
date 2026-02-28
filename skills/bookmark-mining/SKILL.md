@@ -78,7 +78,7 @@ Show the top 5-8 bookmarks with highest content potential:
 {Tweet summary}
 **Why it's interesting:** {brief explanation}
 **Content angle:** {how you could remix this}
-**Suggested format:** post | thread | article | research-first
+**Suggested format:** post | quote-tweet | thread | article | research-first
 
 ### 2. ...
 ```
@@ -87,17 +87,73 @@ Show the top 5-8 bookmarks with highest content potential:
 
 Ask: "Which of these should I work with? Options:"
 
-- **Bank it**: Invoke `capture-thought` to save the idea for later
+- **Bank it**: Invoke `capture-thought` to save the idea for later (source metadata is preserved — see below)
 - **Post now**: Invoke `thought-to-post` to create a post immediately
+- **Quote tweet**: Draft a quote-tweet response to the original
 - **Research first**: Suggest running the `research` skill to go deeper before creating content
 - **Skip**: Move on
 
 ### Step 8: Execute
 
-Based on user choice, delegate to the appropriate skill with the bookmark context as input.
+Based on user choice, delegate to the appropriate skill with the bookmark context as input. Always pass the source metadata block (see below) so downstream skills have full attribution context.
+
+---
+
+## Source Attribution
+
+**Every piece of content that originates from a bookmark must carry source metadata.** This prevents accidental plagiarism and enables proper attribution when publishing.
+
+### Capturing Source Metadata
+
+When banking a thought, creating a post, or writing any content derived from a bookmark, include a source block in the markdown:
+
+```markdown
+> **Source:** [@{username}](https://x.com/{username}/status/{tweet_id})
+> {Full original tweet text}
+```
+
+This block must be preserved through the entire pipeline — from thought bank to queue to published post. It's the provenance chain.
+
+### Remix Rules
+
+Content derived from bookmarks must be **genuinely remixed**, not rephrased:
+
+- **Add your own take** — Layer your experience, opinion, or expertise on top. The bookmark is a spark, not the content itself.
+- **Add new information** — Combine the bookmark's insight with your own knowledge, additional research, or a different framing.
+- **Change the angle** — If the original is a data point, your content could be "what this means for engineers." If it's an opinion, yours could be a counterpoint or extension.
+- **Never just rephrase** — If the only difference between the original tweet and your post is word choice, it's too close. Add substance or skip it.
+
+### Attribution in Published Content
+
+Depending on the format, attribute differently:
+
+| Format | How to attribute |
+|---|---|
+| **Quote tweet** | Use X's native quote-tweet. Your commentary goes above, original is embedded. Best when you want to directly respond or riff on the original. |
+| **Post referencing a tweet** | Include "h/t @{username}" or "via @{username}" and link to the original tweet in the post text. |
+| **Thread** | Reference the source tweet in the first post or as a reply in the thread. |
+| **Article** | Link to the original tweet inline where you reference the idea. No need for formal citation — a natural "as @{username} pointed out" with a link is fine. |
+| **Fully remixed (no direct reference)** | If your content has diverged far enough that the original is just a starting spark, no attribution needed. Use your judgment — if someone reading both would say "that's the same take," attribute. |
+
+### Thought Bank Format
+
+When saving a bookmark-sourced idea via `capture-thought`, use this format:
+
+```markdown
+- **{time}** | #{topic} | {content_type}
+  {Your idea / angle / take}
+  > **Source:** [@{username}](https://x.com/{username}/status/{tweet_id})
+  > {Original tweet text}
+  - Used: [ ]
+```
+
+This ensures the source travels with the idea through the entire pipeline.
+
+---
 
 ## Tips
 
 - Don't just regurgitate bookmarked tweets. The value is in the remix: your take, your angle, your experience layered on top.
 - Bookmarks with high engagement are signals of what resonates, but the best content often comes from low-engagement bookmarks that contain insights nobody else noticed.
 - Group related bookmarks into themes. Three bookmarks about the same trend might warrant a research deep-dive or article rather than individual posts.
+- Quote-tweeting is underrated. If someone said something interesting and you have a strong take on it, a quote tweet with your commentary is fast, attributive, and builds engagement with the original author.
