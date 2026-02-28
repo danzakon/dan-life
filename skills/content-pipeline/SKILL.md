@@ -19,7 +19,6 @@ All pipeline state lives in the user's life repo:
 - `content/.scratchpad/thought-bank-YYYY-MM.md` -- monthly thought capture
 - `content/posts/` -- weekly post files
 - `content/articles/drafts/` -- article drafts
-- `content/CLAUDE.md` -- tone, voice, writing standards
 - `research/curiosity-reports/` -- completed research (content source)
 
 ## Commands
@@ -48,13 +47,12 @@ Generate a pipeline health report:
 3. Check `research/curiosity-reports/` for unconverted research
 4. Suggest 3-5 specific content ideas with recommended format (post/thread/article) and platform
 
-### "Turn my thoughts into posts" / "Turn this research into posts"
+### "Turn this into posts" / "Turn this into an article"
 
 Delegate to the appropriate skill:
 
-- For thoughts: invoke the `thought-to-post` skill workflow
-- For research: invoke the `research-to-posts` skill workflow
-- For articles: invoke the `research-to-article` skill workflow
+- For posts (from any input): invoke the `write-post` skill
+- For articles (from any input): invoke the `write-article` skill
 
 Read `strategy.md` first to understand current emphasis, then pass context to the delegated skill.
 
@@ -89,8 +87,9 @@ When delegating to content creation skills, always pass:
 
 1. The source material (thought, research report, or bookmark)
 2. Current strategy context from `strategy.md` (hot topics, current emphasis)
-3. Reference to `content/CLAUDE.md` for tone/voice rules
-4. Target platform(s)
+3. Target platform(s)
+
+Writing standards and tone guidance are embedded in the `write-post` and `write-article` skills directly.
 
 ## Weekly Post File Format
 
@@ -100,4 +99,4 @@ Posts created by content skills go into weekly files:
 content/posts/W{week}-{month}-{year}.md
 ```
 
-See `content/CLAUDE.md` for the exact post file format.
+See the `write-post` skill for the exact post file format.

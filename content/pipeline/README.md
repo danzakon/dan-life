@@ -12,7 +12,7 @@ Capture -> Create -> Review -> Queue -> Schedule -> Publish -> Track
 
 **Capture**: Thoughts, bookmarks, research reports feed the pipeline. Quick capture via `capture-thought` skill or `bookmark-mining` skill.
 
-**Create**: Convert raw inputs into polished content using `research-to-posts`, `thought-to-post`, or `research-to-article` skills. All skills reference `content/CLAUDE.md` for tone/voice and `strategy.md` for current emphasis.
+**Create**: Write content using `write-post` or `write-article` skills. Both accept any input type (thoughts, research, bookmarks, topics) and have writing standards embedded directly.
 
 **Review**: Human reviews and edits generated content in weekly post files or article drafts.
 
@@ -34,17 +34,16 @@ life/
 │   ├── sync.sh                      # Symlink manager
 │   ├── capture-thought/             # Quick thought capture
 │   ├── content-pipeline/            # Pipeline orchestration
-│   ├── research-to-posts/           # Research -> short-form posts
-│   ├── thought-to-post/             # Thought -> polished post
-│   ├── research-to-article/         # Research -> long-form article
-│   ├── article-thumbnail/           # Article image generation
+│   ├── write-post/                  # Write posts from any input
+│   ├── write-article/               # Write articles from any input
+│   ├── article-image/               # Article image generation
 │   ├── bookmark-mining/             # X bookmark ingestion
 │   ├── postbridge/                  # PostBridge API scheduling
 │   ├── research/                    # Research report generation
 │   └── xquery/                      # X/Grok queries + bookmarks
 │
 ├── content/
-│   ├── CLAUDE.md                    # Tone, voice, writing standards
+│   ├── CLAUDE.md                    # Directory structure, naming conventions, workflow
 │   ├── .scratchpad/                 # Raw ideation + thought banks
 │   │   ├── thought-bank-YYYY-MM.md  # Monthly thought capture files
 │   │   └── {date}-{topic}.md        # Ideation files
@@ -80,10 +79,9 @@ life/
 ### Create
 | Skill | Trigger | What it does |
 |-------|---------|--------------|
-| `research-to-posts` | "turn this research into posts" | Converts research report -> 5-10 platform-targeted posts |
-| `thought-to-post` | "turn this thought into a post" | Expands raw thought -> polished post with platform variants |
-| `research-to-article` | "turn this into an article" | Converts research -> long-form article draft |
-| `article-thumbnail` | "generate thumbnail for this article" | Creates 1200x675 image for article |
+| `write-post` | "write a post about", "turn this into a post" | Writes posts from any input with platform variants |
+| `write-article` | "write an article about", "turn this into an article" | Writes long-form articles from any input |
+| `article-image` | "generate thumbnail for this article" | Creates 1200x675 image for article |
 
 ### Orchestrate
 | Skill | Trigger | What it does |
