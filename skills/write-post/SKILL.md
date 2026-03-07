@@ -142,7 +142,7 @@ If working from a brief with a content ID:
 
 2. If from a bookmark, include the source attribution block (see bookmark-mining skill)
 
-If working from a raw input without a brief (ad-hoc invocation), skip the index.db update — the post can be picked up later by content-refine.
+If working from a raw input without a brief (ad-hoc invocation), skip the index.db update — the post can be picked up later by the content-pipeline work session.
 
 ---
 

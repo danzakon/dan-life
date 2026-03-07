@@ -1,6 +1,6 @@
 ---
 title: Your Coding Agent Should Be a Master of Your Stack, Not a Generalist
-content-id: 20260131-SR-001
+content-id: 20260131-AD-001
 status: draft
 platform: blog
 ---

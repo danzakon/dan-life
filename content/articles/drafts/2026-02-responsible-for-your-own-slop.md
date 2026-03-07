@@ -1,6 +1,6 @@
 ---
 title: You Are Responsible for Your Own Slop
-content-id: 20260207-SR-001
+content-id: 20260207-AD-001
 status: draft
 platform: blog
 ---

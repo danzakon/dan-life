@@ -216,7 +216,7 @@ If running interactively:
 ```
 Want to:
   A) Review these in /content-interview now
-  B) Workshop the top one immediately (idea-dump style)
+  B) Workshop the top one immediately
   C) Done — I'll review later
 ```
 

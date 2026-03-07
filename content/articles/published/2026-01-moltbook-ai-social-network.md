@@ -1,6 +1,6 @@
 ---
 title: The AIs Built Their Own Reddit While We Weren't Looking
-content-id: 20260126-SR-001
+content-id: 20260126-AD-001
 status: published
 platform: blog | substack
 ---

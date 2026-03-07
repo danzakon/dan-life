@@ -144,7 +144,7 @@ YYYYMMDD-{SRC}-NNN.md
 
 Examples:
 20260307-BM-001.md
-20260307-CT-003.md
+20260307-AD-003.md
 ```
 
 See [pipeline/README.md](pipeline/README.md) for the full brief format and ID prefix table.

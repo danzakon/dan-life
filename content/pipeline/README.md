@@ -15,7 +15,7 @@ INGEST → DIGEST → INTERVIEW (human) → DRAFT → REFINE (human) → STAGE �
 │  STAGE 1: INGEST  (automated daily + manual on-demand)              │
 │                                                                     │
 │  bookmark-mining  x-account-monitor  reply-monitor  youtube-monitor │
-│  watch-later-mining  save-raw  idea-dump  capture-thought           │
+│  watch-later-mining  content-pipeline  content-pipeline  content-pipeline           │
 │  research  tutorial                                                 │
 │                          │                                          │
 │                          ▼                                          │
@@ -56,7 +56,7 @@ INGEST → DIGEST → INTERVIEW (human) → DRAFT → REFINE (human) → STAGE �
                ┌───────────▼───────────┐
                │  HUMAN CHECKPOINT 2   │
                │                       │
-               │  /content-refine      │
+               │  /content-pipeline (Work Session)      │
                │                       │
                │  Review drafts        │
                │  Iterate on hooks     │
@@ -90,7 +90,7 @@ INGEST → DIGEST → INTERVIEW (human) → DRAFT → REFINE (human) → STAGE �
 
 **Inbox entries** are for triage. They represent content that arrived passively — a bookmark saved, a YouTube video from a monitored channel, a post from an X account. You haven't reacted yet. The inbox entry is the agent surfacing what's worth your attention: a summary, the strongest angles, timestamps for long-form content. It's a lead, not a commitment. The content-interview session is where you react.
 
-**Briefs** are work orders. They contain your take, your selected angle, and instructions for drafting. The agent can write from a brief immediately. A brief is created when you commit to developing an idea — either during content-interview (for passive ingest) or directly (for idea-dump, capture-thought, or when you already have a take from watching/reading something).
+**Briefs** are work orders. They contain your take, your selected angle, and instructions for drafting. The agent can write from a brief immediately. A brief is created when you commit to developing an idea — either during content-interview (for passive ingest) or directly (for content-pipeline, content-pipeline, or when you already have a take from watching/reading something).
 
 The practical distinction: **inbox = "I received this"** / **brief = "I decided this"**.
 
@@ -99,9 +99,9 @@ Some sources skip the inbox entirely and write a brief directly, because you're 
 | Flow | Through inbox? | Why |
 |------|---------------|-----|
 | bookmark-mining, X monitors, youtube-monitor, watch-later-mining | Yes | Passive ingest — you haven't reacted yet |
-| idea-dump | No | You're in a live workshop session, take is captured in real time |
-| capture-thought | No | You have the thought right now; no triage needed |
-| save-raw (manual URL + "workshop now") | Optional | You can go direct to brief if you already have a take |
+| content-pipeline Add: Workshop | No | You're in a live workshop session, take is captured in real time |
+| content-pipeline Add: Thought | No | You have the thought right now; no triage needed |
+| content-pipeline Add: URL + "workshop now" | Optional | You can go direct to brief if you already have a take |
 
 Everything that enters the system gets an ID and a database entry regardless. The brief may start minimal (just frontmatter + core insight from the agent's read) and get developed during interview, or it may be fully written in one session. No side channels, no untracked parking lots.
 
@@ -111,20 +111,18 @@ Every item receives an ID at ingestion: `YYYYMMDD-{SOURCE}-NNN`. Source prefixes
 
 ```
 20260307-BM-001    ← first bookmark-mining item on March 7
-20260307-CT-003    ← third capture-thought item on March 7
-20260307-ID-001    ← first idea-dump item on March 7
+20260307-AD-001    ← first content-pipeline Add item on March 7
+20260307-YM-002    ← second youtube-monitor item on March 7
 ```
 
 | Prefix | Source |
 |--------|--------|
+| `AD` | content-pipeline (Add mode: thoughts, URLs, bulk ideas) |
 | `BM` | bookmark-mining |
 | `XM` | x-account-monitor |
 | `RM` | reply-monitor |
 | `YM` | youtube-monitor |
 | `WL` | watch-later-mining |
-| `SR` | save-raw (manual) |
-| `CT` | capture-thought |
-| `ID` | idea-dump |
 | `RS` | research |
 | `TU` | tutorial |
 
@@ -218,7 +216,7 @@ Configuration and operational state. Skills read these files as config. Nothing 
 | `strategy.md` | Content themes, voice, cadence, hot topics | Human (periodically) |
 | `sources.md` | X accounts + YouTube channels to monitor | Human (as needed) |
 | `series.md` | Active content series and episodes | Skills + human |
-| `queue.md` | Posts pending scheduling | content-pipeline, content-refine |
+| `queue.md` | Posts pending scheduling | content-pipeline, content-pipeline (Work Session) |
 | `history.md` | Published content log (dedup reference) | Daily scheduler |
 | `index.db` | All items + status (query layer) | Every skill |
 | `schema.sql` | DB schema definition (git-tracked) | Human (on schema changes) |
@@ -250,14 +248,14 @@ Format: `| ID | Date | Platform | Type | Summary | Source |`
 All ingest agents share the same output contract:
 
 1. **Assign a namespaced ID** — query `index.db` for the highest number for that source prefix today, increment
-2. **Write source content** to `raw/{type}/YYYYMMDD-SRC-NNN-{slug}.md` (when applicable — some sources like capture-thought have no raw file)
+2. **Write source content** to `raw/{type}/YYYYMMDD-SRC-NNN-{slug}.md` (when applicable — thoughts have no raw file)
 3. **Register in `index.db`** — INSERT with `status: 'raw'`
-4. **Write inbox entry** to `inbox/YYYY-MM-DD.md` (passive ingest sources: bookmark-mining, X monitors, youtube-monitor, watch-later-mining, save-raw, research, tutorial)
+4. **Write inbox entry** to `inbox/YYYY-MM-DD.md` (passive ingest sources: bookmark-mining, X monitors, youtube-monitor, watch-later-mining)
    — OR —
-   **Write a brief directly** to `briefs/YYYYMMDD-SRC-NNN.md` (active session sources: idea-dump, capture-thought)
+   **Write a brief directly** to `briefs/YYYYMMDD-SRC-NNN.md` (active session: content-pipeline Add mode)
 5. **Update `inbox/_index.md`**
 
-Passive sources write an inbox entry; the brief is created later during content-interview when you give your take. Active session sources write the brief immediately because your take is captured in real time.
+Passive sources write an inbox entry; the brief is created later during content-interview when you give your take. Content-pipeline's Add mode writes the brief immediately because your take is captured in real time.
 
 **Automated (daily 7:00 AM Cowork task):**
 
@@ -269,15 +267,15 @@ Passive sources write an inbox entry; the brief is created later during content-
 | `youtube-monitor` | `sources.md` channels | ytquery |
 | `watch-later-mining` | YouTube Watch Later | ytquery |
 
-**Manual / on-demand:**
+**Manual / on-demand (all via `/content-pipeline`):**
 
-| Agent | Purpose |
-|-------|---------|
-| `capture-thought` | Single thought → brief (instant, no conversation) |
-| `idea-dump` | Raw thought stream → workshop → multiple briefs |
-| `save-raw` | Ingest any URL or pasted content |
-| `research` | Deep research → `research/reports/` + brief |
-| `tutorial` | Technical guide → `tutorials/guides/` + brief |
+| Action | Purpose |
+|--------|---------|
+| Add: Thought | Single thought → brief (instant) |
+| Add: Workshop | Raw thought stream → workshop → multiple briefs |
+| Add: URL | Ingest any URL or pasted content |
+| Add: Research | Deep research → `research/reports/` + brief |
+| Add: Tutorial | Technical guide → `tutorials/guides/` + brief |
 
 #### Raw File Frontmatter
 
@@ -339,7 +337,7 @@ Every item in the system has a brief. Briefs range from minimal (a captured thou
 id: YYYYMMDD-SRC-NNN
 created: YYYY-MM-DD
 source-type: x-post | x-article | youtube | web | research | thought | tutorial
-ingest-source: bookmark-mining | capture-thought | idea-dump | ...
+ingest-source: content-pipeline | bookmark-mining | x-account-monitor | reply-monitor | youtube-monitor | watch-later-mining | research | tutorial
 status: raw | inbox | approved | draft | refined | queued | published
 format: post | thread | article | post+article | full-tree | reply
 platform: Both | Twitter | LinkedIn
@@ -372,7 +370,7 @@ Specific guidance: tone, hooks to try, things to avoid. (Added during interview 
 - {ID} — {title or note, if any existing pipeline items connect}
 ```
 
-For a quick thought via `capture-thought`, only the frontmatter and Core Insight are populated. Everything else gets filled in during the interview stage.
+For a quick thought via `content-pipeline`, only the frontmatter and Core Insight are populated. Everything else gets filled in during the interview stage.
 
 ### Stage 2: Digest
 
@@ -411,7 +409,7 @@ Output lands in `posts/YYYY-W{NN}.md` or `articles/drafts/`, with `content-id` f
 
 ### Stage 5: Refine (Human Checkpoint 2)
 
-Run `/content-refine` to review generated drafts.
+Run `/content-pipeline (Work Session)` to review generated drafts.
 
 The skill presents each new draft with its alternative hooks. You can:
 - Approve as-is
@@ -456,7 +454,7 @@ Every signal that enters should be treated as a potential content tree, not a si
 
 **Series Tracker (`series.md`):** When a theme appears across 3+ items, promote it to an active series. Series give a content calendar structure: each episode is planned, tracked, and crosslinked to previous episodes when published.
 
-**Idea Dump (`/idea-dump`):** For bulk thought processing. Paste raw stream-of-consciousness notes — from the Notes app, voice-to-text, anything. The skill parses individual ideas, workshops angles with you, and creates a brief for each approved idea. Spinoffs become linked briefs.
+**Idea Dump (`/content-pipeline`):** For bulk thought processing. Paste raw stream-of-consciousness notes — from the Notes app, voice-to-text, anything. The skill parses individual ideas, workshops angles with you, and creates a brief for each approved idea. Spinoffs become linked briefs.
 
 ---
 
@@ -476,7 +474,7 @@ raw → inbox → approved → draft → refined → queued → published
 | `inbox` | content-digest | Scored, ranked, angles refined |
 | `approved` | content-interview | User approved; brief fully developed |
 | `draft` | write-post / write-article | Content drafted with variants |
-| `refined` | content-refine | User approved draft |
+| `refined` | content-pipeline (Work Session) | User approved draft |
 | `queued` | content-pipeline (stage) | In queue.md with target date |
 | `published` | Daily scheduler | Posted via PostBridge, logged in history.md |
 
@@ -510,45 +508,53 @@ sqlite3 content/pipeline/index.db \
 
 ## Skills Reference
 
-### Ingest Skills
+### Entry Point
 
-All ingest skills follow the output contract: assign ID → write raw file (if applicable) → write brief → register in `index.db` → write inbox entry → update `_index.md`.
+Everything goes through `/content-pipeline`. It shows a health dashboard and routes to all actions.
 
-| Skill | Trigger | What it does | Tool |
-|-------|---------|--------------|------|
-| `bookmark-mining` | automated / "check bookmarks" | X bookmarks → raw + brief + inbox | xquery |
-| `x-account-monitor` | automated | `sources.md` X accounts → raw + brief + inbox | xquery |
-| `reply-monitor` | automated | Replies to @danzakon → raw + brief + inbox | xquery |
-| `youtube-monitor` | automated / "check YouTube" | `sources.md` channels → raw + brief + inbox | ytquery |
-| `watch-later-mining` | automated | Watch Later playlist → raw + brief + inbox | ytquery |
-| `save-raw` | "fetch this: {url}" | Any URL or pasted content → raw + brief + inbox | Exa / WebFetch |
-| `capture-thought` | "thought: {idea}" | Single thought → brief + inbox (instant, no conversation) | None |
-| `idea-dump` | "idea dump: {text}" | Raw thought stream → workshop → multiple briefs + inbox | None |
-| `research` | "research {topic}" | Deep research → `research/reports/` + brief + inbox | Exa |
-| `tutorial` | "tutorial: {topic}" | Technical guide → `tutorials/guides/` + brief + inbox | Exa |
+### Ingest Skills (called by content-pipeline options 1-6)
 
-### Process Skills
+All ingest skills follow the output contract: assign ID → write raw file → register in `index.db` → write inbox entry → update `_index.md`.
 
-| Skill | Trigger | What it does |
-|-------|---------|--------------|
-| `content-digest` | automated (after ingest) | Scores and ranks inbox items, refines angles |
-| `content-interview` | `/content-interview` | Interactive item review → develops briefs |
-| `content-pipeline` | `/content-pipeline` | Master orchestration: status, routing, queue |
-| `content-refine` | `/content-refine` | Iterative draft review and editing |
+| Skill | Source | ID Prefix | Tool |
+|-------|--------|-----------|------|
+| `bookmark-mining` | X bookmarks | `BM` | xquery |
+| `x-account-monitor` | X accounts from `sources.md` | `XM` | xquery |
+| `reply-monitor` | Replies to @danzakon | `RM` | xquery |
+| `youtube-monitor` | YouTube channels from `sources.md` | `YM` | ytquery |
+| `watch-later-mining` | YouTube Watch Later | `WL` | ytquery |
 
-### Creation Skills
+### Content-Pipeline Add Mode (option 7)
 
-| Skill | Trigger | What it does |
-|-------|---------|--------------|
-| `write-post` | automated / "write a post" | Brief → post variants + alt hooks + content tree |
-| `write-article` | automated / "write an article" | Brief → long-form draft |
-| `article-image` | "generate thumbnail" | Article → 1200x628 header image |
+Smart router — detects input type and routes accordingly. All manual additions use the `AD` prefix.
+
+| Action | What it does |
+|--------|-------------|
+| Add: Thought | Single thought → brief (instant) |
+| Add: Workshop | Bulk ideas → interactive workshop → multiple briefs |
+| Add: URL | Fetch URL content → raw file + brief + inbox entry |
+| Add: Research | Delegates to `research` skill → report + brief |
+| Add: Tutorial | Delegates to `tutorial` skill → guide + brief |
+
+### Content-Pipeline Work Session (option 8)
+
+Batch through items stage by stage. Absorbs drafting (write-post, write-article) and refining.
+
+### Internal Skills (called by content-pipeline, not user-invocable)
+
+| Skill | Stage | What it does |
+|-------|-------|-------------|
+| `content-digest` | Digest | Scores inbox items against strategy, re-ranks |
+| `content-interview` | Interview | Interactive inbox review → develops briefs |
+| `write-post` | Draft | Brief → Twitter + LinkedIn variants + alt hooks |
+| `write-article` | Draft | Brief → long-form draft |
+| `article-image` | Draft | Article → 1200x628 header image |
 
 ### Publishing
 
-| Skill | Trigger | What it does |
-|-------|---------|--------------|
-| `postbridge` | automated / "schedule this" | PostBridge API scheduling |
+| Skill | What it does |
+|-------|-------------|
+| `postbridge` | PostBridge API: schedule posts, upload media |
 
 ---
 
@@ -568,17 +574,19 @@ See `cowork-tasks.md` for exact setup instructions and prompts.
 
 ## Human Workflow
 
+Everything goes through `/content-pipeline`. One entry point, one command.
+
 **Anytime (~10 sec):**
-- "Thought: {idea}" — instant capture as a brief
+- `/content-pipeline thought: {idea}` — instant capture as a brief
 
 **Daily or every few days (~20-30 min):**
-- `/content-interview` — review the latest digest, share your takes, approve items
-- `/content-refine` — review generated drafts, approve for queue
+- `/content-pipeline` → option 9 (Review inbox) — triage signals, approve items
+- `/content-pipeline` → option 8 (Work session) — draft, refine, and queue content
 
 **On-demand:**
-- "Idea dump: {paste notes}" — workshop raw thoughts into pipeline items
-- "Research {topic}" — kick off a deep research session
-- "Fetch this: {url}" — manually ingest a specific piece of content
+- `/content-pipeline idea dump: {paste notes}` — workshop raw thoughts
+- `/content-pipeline` → option 7 (Add) — URL, research request, tutorial, anything
+- `/content-pipeline` → option 6 (Full sweep) — pull from all sources
 
 **Weekly (~5 min):**
 - Review staged articles (Monday notification from Cowork)
@@ -596,14 +604,14 @@ Everything else — ingest, digest, scheduling, history tracking, dedup — runs
 
 **New YouTube channel:** Add the channel ID to `sources.md` with an optional keyword filter.
 
-**One-off content:** Use `save-raw` with the URL. Content is ingested, formatted, and added to the inbox immediately.
+**One-off content:** Use `content-pipeline` with the URL. Content is ingested, formatted, and added to the inbox immediately.
 
 ### Handling Content You Can't Scrape
 
-X articles, paywalled posts, and anything requiring a real browser can't be ingested automatically. Use `save-raw`:
+X articles, paywalled posts, and anything requiring a real browser can't be ingested automatically. Use `content-pipeline`:
 
 1. Paste the URL (and optionally the text) into a Claude session
-2. `save-raw` formats it correctly and writes to `raw/x-articles/` or `raw/web/`
+2. `content-pipeline` formats it correctly and writes to `raw/x-articles/` or `raw/web/`
 3. Brief and inbox entry are created automatically
 
 ### Recovery
@@ -627,18 +635,14 @@ X articles, paywalled posts, and anything requiring a real browser can't be inge
 - [x] Pipeline README rewritten (this file)
 
 ### Skills — Complete
-- [x] `content-pipeline` — session orchestrator
+- [x] `content-pipeline` — single entry point: dashboard, ingest, add, work session
 - [x] `content-digest` — score + rank inbox items
-- [x] `content-interview` — interactive inbox review → briefs
-- [x] `content-refine` — iterative draft editing loop
-- [x] `idea-dump` — conversational content workshop
-- [x] `capture-thought` — instant thought capture → brief
+- [x] `content-interview` — interactive inbox review → briefs (internal, called by pipeline)
 - [x] `bookmark-mining` — X bookmark ingest
 - [x] `x-account-monitor` — X account monitoring
 - [x] `reply-monitor` — reply monitoring
 - [x] `youtube-monitor` — channel monitoring + transcripts
 - [x] `watch-later-mining` — Watch Later ingest
-- [x] `save-raw` — manual URL/content ingest
 - [x] `research` — deep research reports
 - [x] `tutorial` — technical guide creation
 - [x] `write-post` — post drafting from briefs
@@ -648,6 +652,8 @@ X articles, paywalled posts, and anything requiring a real browser can't be inge
 - [x] `postbridge` — PostBridge API scheduling
 - [x] `ytquery` — YouTube CLI tool
 - [x] `xquery` — X/Twitter CLI tool
+- [x] Consolidated: capture-thought, idea-dump, save-raw, content-pipeline (Work Session) → absorbed into content-pipeline
+- [x] Prefix migration: CT, ID, SR → AD
 
 ### Infrastructure — Remaining
 - [ ] Install ytquery dependencies: `pip install yt-dlp youtube-transcript-api && brew install ffmpeg deno`
@@ -655,7 +661,7 @@ X articles, paywalled posts, and anything requiring a real browser can't be inge
 - [ ] Set up YouTube cookies for Watch Later
 - [ ] Add YouTube channel IDs to `sources.md`
 - [ ] Set up Cowork scheduled tasks (see `cowork-tasks.md`)
-- [ ] End-to-end test: capture-thought → brief → interview → write-post → queue
+- [ ] End-to-end test: content-pipeline → brief → interview → write-post → queue
 
 ---
 

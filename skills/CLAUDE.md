@@ -99,19 +99,32 @@ brew install ffmpeg deno          # deno required by yt-dlp since Nov 2025
 
 ### Content Pipeline
 
-The pipeline flows: **Ingest → Digest → Interview → Draft → Refine → Queue → Publish**
+The pipeline is accessed through a single entry point: **`/content-pipeline`**.
 
-| Skill | Stage | What it does |
-|-------|-------|-------------|
-| `content-pipeline` | Orchestrator | Master session menu. Reads pipeline state, presents options, delegates to all other skills. Start here. |
-| `content-digest` | Digest | Scores inbox items against strategy, refines angles, re-ranks by opportunity. Runs after ingest. |
-| `content-interview` | Interview (human) | Interactive inbox review. Shows items one at a time, captures your take, writes briefs. |
-| `content-refine` | Refine (human) | Iterative draft editing. Presents drafts, captures feedback, polishes. |
-| `db-rebuild` | Maintenance | Reconstructs `index.db` from file frontmatter when DB is corrupted or lost. |
+```
+/content-pipeline
+├── Dashboard (always shown — health, queue status, recommendations)
+├── INGEST — pull new signals from sources
+│   ├── bookmark-mining, x-account-monitor, reply-monitor
+│   ├── youtube-monitor, watch-later-mining
+│   └── Full sweep (all sources + digest)
+├── ADD — put something into the system
+│   └── Smart router: thoughts, URLs, bulk ideas, research, tutorials
+└── WORK — develop and ship content
+    ├── Work session (draft → refine → queue, batch or one-at-a-time)
+    └── Review inbox (delegates to content-interview)
+```
+
+| Skill | Role | User-invocable? |
+|-------|------|-----------------|
+| `content-pipeline` | Single entry point for all content work. Dashboard, ingest, add, work session. | Yes — `/content-pipeline` |
+| `content-interview` | Interactive inbox review. Shows items one at a time, captures your take, writes briefs. | No — called by pipeline option 9 |
+| `content-digest` | Scores inbox items against strategy, refines angles, re-ranks by opportunity. | No — runs automatically after ingest |
+| `db-rebuild` | Reconstructs `index.db` from file frontmatter when DB is corrupted or lost. | Yes — `/db-rebuild` |
 
 ### Ingest Skills (Sources → Raw Files + Inbox)
 
-All ingest skills follow the same output contract: assign ID → write raw file → write inbox entry → register in `index.db`.
+All ingest skills follow the same output contract: assign ID → write raw file → write inbox entry → register in `index.db`. Called by content-pipeline options 1-6.
 
 | Skill | Source | ID Prefix | CLI Tool |
 |-------|--------|-----------|---------|
@@ -120,19 +133,25 @@ All ingest skills follow the same output contract: assign ID → write raw file 
 | `reply-monitor` | Replies to @danzakon | `RM` | `xquery x:search` |
 | `youtube-monitor` | YouTube channels from sources.md | `YM` | `ytquery y:channel`, `y:transcript`, `y:thumbnail` |
 | `watch-later-mining` | YouTube Watch Later playlist | `WL` | `ytquery y:watchlater` |
-| `save-raw` | Manual URL or pasted text | `SR` | Exa MCP / WebFetch |
-| `idea-dump` | Raw thoughts → structured content | `ID` | None |
-| `research` | Deep research reports | `RS` | Exa MCP |
-| `tutorial` | Technical how-to guides | `TU` | Exa MCP |
 
 ### Creation Skills (Briefs → Content)
+
+Called internally by the content-pipeline work session.
 
 | Skill | Input | Output |
 |-------|-------|--------|
 | `write-post` | Brief file | Twitter + LinkedIn variants, alt hooks |
 | `write-article` | Brief file | Long-form draft in `content/articles/drafts/` |
-| `article-image` | Article file | 1200×628px header image in `content/images/` |
-| `capture-thought` | Raw thought | Brief in `content/briefs/` + registered in `index.db` |
+| `article-image` | Article file | 1200x628px header image in `content/images/` |
+
+### Research + Learning
+
+These remain directly invocable AND accessible through content-pipeline's Add mode.
+
+| Skill | What it does | ID Prefix |
+|-------|-------------|-----------|
+| `research` | Multi-agent research → opinionated report in `research/reports/` | `RS` |
+| `tutorial` | Multi-agent research → practical step-by-step guide in `tutorials/guides/` | `TU` |
 
 ### Publishing
 
@@ -140,12 +159,10 @@ All ingest skills follow the same output contract: assign ID → write raw file 
 |-------|-------------|
 | `postbridge` | PostBridge API: upload media, schedule posts, manage social accounts |
 
-### Research + Learning
+### CLI Tools (also skills)
 
 | Skill | What it does |
 |-------|-------------|
-| `research` | Multi-agent research → opinionated report in `research/reports/` |
-| `tutorial` | Multi-agent research → practical step-by-step guide in `tutorials/guides/` |
 | `xquery` | Query Grok + X API directly (also a CLI tool, see above) |
 | `ytquery` | Query YouTube directly (also a CLI tool, see above) |
 
@@ -155,16 +172,14 @@ All ingest skills follow the same output contract: assign ID → write raw file 
 
 Every pipeline item gets a stable ID: `YYYYMMDD-{PREFIX}-NNN`
 
-| Prefix | Source skill | Data type |
-|--------|-------------|-----------|
+| Prefix | Source | Data type |
+|--------|--------|-----------|
+| `AD` | content-pipeline (Add mode) | Manual additions: thoughts, URLs, bulk ideas |
 | `BM` | bookmark-mining | X bookmarks |
 | `XM` | x-account-monitor | X posts from monitored accounts |
 | `RM` | reply-monitor | Replies to @danzakon |
 | `YM` | youtube-monitor | YouTube videos (channel monitoring) |
 | `WL` | watch-later-mining | YouTube Watch Later videos |
-| `SR` | save-raw | Manually ingested URLs / pasted content |
-| `CT` | capture-thought | Quick thought capture → brief |
-| `ID` | idea-dump | Raw thoughts → workshopped briefs |
 | `RS` | research | Research reports |
 | `TU` | tutorial | Technical guides |
 
@@ -205,10 +220,9 @@ content/pipeline/
 content/
 ├── inbox/            ← Daily intake files (YYYY-MM-DD.md)
 ├── raw/              ← Source material (x-posts/, youtube/, web/)
-├── briefs/           ← Post-interview work items (YYYYMMDD-SRC-NNN.md)
+├── briefs/           ← Work items (YYYYMMDD-SRC-NNN.md)
 ├── posts/            ← Weekly post drafts (YYYY-W{NN}.md)
-├── articles/         ← Long-form (drafts/ + published/)
-└── briefs/           ← Work items (the atomic unit of the pipeline)
+└── articles/         ← Long-form (drafts/ + published/)
 
 research/reports/     ← Research output
 tutorials/guides/     ← Technical guide output

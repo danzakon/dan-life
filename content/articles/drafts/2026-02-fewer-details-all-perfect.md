@@ -1,6 +1,6 @@
 ---
 title: Fewer Details, All Perfect
-content-id: 20260228-SR-002
+content-id: 20260228-AD-002
 status: draft
 platform: blog
 ---

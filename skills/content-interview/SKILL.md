@@ -1,3 +1,15 @@
+---
+name: content-interview
+description: "[INTERNAL] Interactive inbox review session. Called by content-pipeline
+  option 9. Do not invoke directly — use /content-pipeline instead."
+argument-hint: "[optional: date to review]"
+allowed-tools:
+  - Read
+  - Write
+  - Bash
+  - Glob
+---
+
 # Content Interview
 
 Interactive inbox review session. Presents digested inbox items one at a time, captures your take on each, creates briefs for approved items, and hands off to drafting. The human-in-the-loop checkpoint between ingest and content creation.
@@ -6,8 +18,7 @@ Interactive inbox review session. Presents digested inbox items one at a time, c
 
 ## Trigger
 
-- Manual: "/content-interview", "Review my inbox", "Let's go through the inbox"
-- From content-pipeline session menu (option A)
+- Called by content-pipeline (option 9: Review Inbox)
 
 ---
 
