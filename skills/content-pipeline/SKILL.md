@@ -61,7 +61,6 @@ sqlite3 content/pipeline/index.db \
 
 Also check:
 - `content/pipeline/queue.md` — how many posts are queued with target dates
-- `content/.scratchpad/thought-bank-*.md` — count unused thoughts (entries with `Used: [ ]`)
 
 ### Step 2: Check for direct input
 
@@ -96,7 +95,6 @@ Pipeline — {date}
   Drafts          3     need refining
   Refined         0     —
   Queue           0     EMPTY
-  Thoughts        4     unused in thought bank
 
   Queue Runway: 0 days — CRITICAL
   Today: nothing scheduled
@@ -148,8 +146,7 @@ Priority order for recommendations (pick top 2-3):
 4. Large approved backlog → recommend work session (drafting)
 5. Inbox items waiting → recommend review inbox
 6. Theme gaps (compare history.md vs strategy.md) → recommend specific content type
-7. Unused thoughts in thought bank → mention count
-8. Pending next-actions (briefs needing research/tutorial) → flag them
+7. Pending next-actions (briefs needing research/tutorial) → flag them
 
 Wait for user selection.
 
@@ -747,7 +744,7 @@ These bypass the menu for quick actions:
 | Input | Route |
 |-------|-------|
 | "pipeline status" / "check my pipeline" / "health" | Dashboard only |
-| "what should I post" | Query strategy + approved briefs + thought bank, suggest 3-5 ideas |
+| "what should I post" | Query strategy + approved briefs, suggest 3-5 ideas |
 | "queue this" / "queue these" | Run Queue Flow on specified or all refined items |
 | "thought: {text}" | Add: Thought (fast-path) |
 | "idea dump: {text}" | Add: Workshop |
@@ -780,7 +777,6 @@ All state lives in the life repo:
 - `content/briefs/` — work items (the atomic unit)
 - `content/posts/` — weekly post files (`YYYY-W{NN}.md`)
 - `content/articles/` — long-form drafts and published
-- `content/.scratchpad/thought-bank-*.md` — monthly thought banks
 - `research/reports/` — research output
 - `tutorials/guides/` — technical guides
 

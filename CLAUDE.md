@@ -14,14 +14,36 @@ This repository is an operating system for managing life—work, content, resear
 
 ```
 life/
-├── content/          # Social media content (AI engineering, tech, business)
-├── tenex/            # Engineering leadership and process development
-├── research/         # Research notes and explorations
-├── prompts/          # Prompt templates and experiments
-├── shopping/         # Shopping lists and purchase tracking
-├── private/          # Personal/sensitive files (gitignored)
-└── CLAUDE.md         # This file
+├── content/           # Social media content (AI engineering, tech, business)
+├── skills/            # Agent skill definitions, symlinked to all agent dirs
+├── tutorials/         # Step-by-step technical guides (output of tutorial skill)
+├── technical-guides/  # Personal reference docs: tool setup, infra, environments
+├── research/          # Research reports and explorations (output of research skill)
+├── tenex/             # Engineering leadership and process development
+├── prompts/           # Prompt templates and experiments
+├── shopping/          # Shopping lists and purchase tracking
+├── private/           # Personal/sensitive files (gitignored, never accessed)
+└── CLAUDE.md          # This file
 ```
+
+Each directory has its own CLAUDE.md with conventions and context. Check it before working in any directory.
+
+---
+
+## Skills System
+
+`skills/` is the source of truth for all agent skills. Skills are symlinked from here to `~/.claude/skills/`, `~/.cursor/skills/`, and other agent directories via `skills/sync.sh`.
+
+```
+skills/
+├── {skill-name}/
+│   ├── SKILL.md        # Agent instructions for this skill
+│   └── scripts/        # Optional CLI executables
+├── sync.sh             # Run after adding any skill to sync symlinks
+└── CLAUDE.md           # Full reference: all skills, CLI tools, ID prefixes
+```
+
+See `skills/CLAUDE.md` for the complete skill inventory, CLI tool reference (`xquery`, `ytquery`), and pipeline ID prefix table. After adding a new skill, run `bash skills/sync.sh`.
 
 ---
 
