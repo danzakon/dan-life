@@ -17,8 +17,8 @@ Generate optimized images for articles and social media sharing.
 ```
 ┌─────────────────────────────────────────┐
 │                                         │
-│            1200 x 675 px                │
-│           (16:9 aspect ratio)           │
+│            1200 x 628 px                │
+│          (1.91:1 aspect ratio)          │
 │                                         │
 │    Safe zone for text: center 80%       │
 │                                         │
@@ -27,11 +27,13 @@ Generate optimized images for articles and social media sharing.
 
 | Property | Value |
 |----------|-------|
-| Dimensions | 1200 x 675 px |
-| Aspect Ratio | 16:9 |
-| Format | PNG or JPG |
+| Dimensions | 1200 x 628 px |
+| Aspect Ratio | 1.91:1 (Twitter OG card standard) |
+| Format | PNG |
 | Max File Size | 5MB |
 | Min Dimensions | 800 x 418 px |
+
+This is the standard Twitter/X OG card size. No cropping occurs — what you generate is exactly what displays.
 
 ### File Naming
 
@@ -80,7 +82,7 @@ Color palette: [PRIMARY COLORS]
 Composition: [LAYOUT DESCRIPTION - e.g., centered subject, rule of thirds, etc.]
 
 Technical requirements:
-- Dimensions: 1200x675 pixels (16:9 aspect ratio)
+- Dimensions: 1200x628 pixels (1.91:1 aspect ratio, Twitter OG card)
 - Leave space for potential text overlay in [TOP/BOTTOM/CENTER]
 - High contrast for thumbnail visibility
 
@@ -97,23 +99,46 @@ mcp__nano-banana__generate_image with the prompt
 
 Save to: `/Users/danzakon/dev/life/content/images/`
 
-## Style Guidelines
+## House Visual Style
 
-### Do
+All article images follow a consistent visual identity. This is what makes content recognizable across posts.
 
-- Use bold, simple visuals that read well at small sizes
-- Create visual metaphors that intrigue
-- Match the article's intellectual level
-- Use negative space effectively
-- Make it shareable (would someone retweet this?)
+### The Style: Dark + Bold + Minimal
 
-### Don't
+```
+Background:  Dark (#0a0a0a to #1a1a2e gradient range)
+Accent:      One strong color per image (varies by topic — see below)
+Typography:  Not rendered in the image (X handles titles via cards)
+Composition: Single strong visual element, generous negative space
+Aesthetic:   Clean, editorial, data-viz inspired — not "AI art"
+```
 
-- Put too much text on the image (title only if needed)
+### Accent Color by Theme
+
+| Content theme | Accent color | Hex |
+|---------------|-------------|-----|
+| AI / Engineering | Electric blue | `#64ffda` |
+| Hot take / Opinion | Coral red | `#ff6b6b` |
+| Practical / How-to | Amber | `#ffd93d` |
+| Research / Analysis | Purple | `#a78bfa` |
+| Tenex / Company | Teal | `#2dd4bf` |
+
+### Style Rules
+
+**Do:**
+- Use bold, simple visuals that read at thumbnail size
+- Create visual metaphors — abstract over literal
+- Use negative space generously
+- Match the article's intellectual weight
+- Keep the dark background consistent across all images
+
+**Don't:**
+- Put text on the image (X renders title via the card)
 - Use generic stock photo aesthetics
-- Include human faces unless essential (AI faces look uncanny)
-- Make it too busy or cluttered
-- Use cliche AI art styles (the "Midjourney look")
+- Include human faces (AI faces look uncanny)
+- Make it busy or cluttered
+- Use the "Midjourney look" (over-rendered, hyper-detailed)
+- Use bright or white backgrounds (breaks the visual identity)
 
 ## Examples
 
@@ -130,7 +155,7 @@ Color palette: Navy blue (#0a192f), electric blue (#64ffda), white accents
 Composition: Central focal point with radiating connections
 
 Technical requirements:
-- Dimensions: 1200x675 pixels (16:9 aspect ratio)
+- Dimensions: 1200x628 pixels (1.91:1 aspect ratio, Twitter OG card)
 - Leave bottom third relatively clean for potential text overlay
 - High contrast for thumbnail visibility
 
@@ -149,7 +174,7 @@ Color palette: Black, white, one accent color (coral #FF6B6B)
 Composition: Symmetrical, centered
 
 Technical requirements:
-- Dimensions: 1200x675 pixels (16:9 aspect ratio)
+- Dimensions: 1200x628 pixels (1.91:1 aspect ratio, Twitter OG card)
 - Central negative space for visual breathing room
 - Strong silhouettes for thumbnail clarity
 
@@ -174,7 +199,33 @@ If MCP is not available, output the prompt for manual use in:
 
 ## Output
 
-Always provide:
-1. The image file saved to `/Users/danzakon/dev/life/content/images/`
-2. The prompt used (for future reference/iteration)
-3. Suggested alt text for accessibility
+Always provide all three artifacts:
+
+1. **Image file** saved to `content/images/{YYYY}-{MM}-{slug}-og.png`
+2. **Prompt file** saved to `content/images/prompts/{YYYY}-{MM}-{slug}-prompt.md` with the full generation prompt for reproducibility
+3. **Alt text** suggested for accessibility
+
+### Prompt File Format
+
+```markdown
+# Image Prompt: {Article Title}
+
+**Article:** content/articles/drafts/{filename}
+**Generated:** YYYY-MM-DD
+**Tool:** nano-banana (Gemini)
+**Theme accent:** {color name} ({hex})
+
+## Prompt
+
+{The exact prompt used to generate the image}
+
+## Alt Text
+
+{Suggested alt text for the image}
+
+## Notes
+
+{Any iteration notes — what was tried, what worked}
+```
+
+This file is the reproducibility record. If the image needs to be regenerated (e.g., after a style update), the prompt is right here.

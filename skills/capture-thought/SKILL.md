@@ -43,7 +43,7 @@ Append each thought as:
 
 ```markdown
 
-### {M-DD-YY} | {Topic Tag}
+### YYYY-MM-DD | {Topic Tag}
 
 {The raw thought exactly as provided}
 
@@ -63,15 +63,38 @@ Append each thought as:
 5. If the user provides multiple thoughts at once, capture each as a separate entry.
 6. Never modify existing entries in the file.
 
+## Series Connection Check
+
+After capturing, do a quick (non-blocking) check:
+
+1. Read `content/pipeline/series.md` — does this thought's topic connect to any active series?
+2. Scan the current month's thought bank — are there 2+ unused thoughts on the same topic tag?
+
+If a connection is found, add a brief note after the confirmation:
+
+```
+Captured: AI Engineering thought in March bank.
+(Connects to "The Refinement Era" series — 3 related thoughts now. Consider /idea-dump to develop.)
+```
+
+If 3+ related unused thoughts are found, suggest promoting to a series:
+
+```
+Captured: AI Engineering thought in March bank.
+You now have 3 unused thoughts on agentic coding. Worth starting a series? Run /idea-dump to workshop them.
+```
+
+Keep this lightweight — one extra line maximum. The capture path must stay fast.
+
 ## Examples
 
 User: "Add a thought: Most AI agents fail because they try to do too much. The best ones are narrow and deep."
 
-Action: Append to `thought-bank-2026-02.md`:
+Action: Append to `thought-bank-2026-03.md`:
 
 ```markdown
 
-### 2-28-26 | AI Engineering
+### 2026-03-07 | AI Engineering
 
 Most AI agents fail because they try to do too much. The best ones are narrow and deep.
 
@@ -79,4 +102,4 @@ Most AI agents fail because they try to do too much. The best ones are narrow an
 **Used:** [ ]
 ```
 
-Response: "Captured: AI Engineering thought in February bank."
+Response: "Captured: AI Engineering thought in March bank."

@@ -12,11 +12,20 @@ allowed-tools:
 
 # Bookmark Mining
 
-Ingest recent X bookmarks and surface content ideas. Finds interesting takes, data, and topics worth remixing into your own content.
+Ingest recent X bookmarks into the content pipeline. Fetches bookmarks, filters for content potential, writes raw files and inbox entries with content angles, and registers everything in `index.db`.
 
 ## Prerequisites
 
 The `xquery` command must be in the user's PATH with `x:bookmarks` support configured (OAuth 2.0 user tokens). See the xquery skill for setup.
+
+## Workspace
+
+- `content/raw/x-posts/` — full tweet text storage
+- `content/inbox/YYYY-MM-DD.md` — today's inbox
+- `content/inbox/_index.md` — master registry
+- `content/pipeline/index.db` — item registration
+- `content/pipeline/strategy.md` — for angle generation
+- `content/pipeline/series.md` — for series connection checks
 
 ## Workflow
 
@@ -67,35 +76,104 @@ Group bookmarks by theme/topic. Rank by content potential:
 - **Medium potential**: Interesting but common knowledge, or already widely discussed
 - **Low potential**: Personal/tangential, no clear content angle
 
-### Step 6: Present Candidates
+### Step 6: Write Raw Files and Inbox Entries
 
-Show the top 5-8 bookmarks with highest content potential:
+For each bookmark worth capturing (high or medium potential), assign a `BM` ID and write to the pipeline:
+
+**Assign ID:**
+```bash
+sqlite3 content/pipeline/index.db \
+  "SELECT id FROM items WHERE id LIKE '$(date +%Y%m%d)-BM-%' ORDER BY id DESC LIMIT 1;"
+```
+Increment the NNN portion (start at 001 if no results).
+
+**Write raw file** to `content/raw/x-posts/YYYYMMDD-BM-NNN-{handle}-{slug}.md`:
+
+```yaml
+---
+id: YYYYMMDD-BM-NNN
+source-type: x-post
+ingest-source: bookmark-mining
+original-url: https://x.com/{username}/status/{tweet_id}
+author: @{username}
+captured: ISO 8601 UTC
+---
+
+{Full tweet/thread text}
+```
+
+**Write inbox entry** to `content/inbox/YYYY-MM-DD.md`:
+
+```markdown
+## [YYYYMMDD-BM-NNN] @{author} — {Topic}
+
+**Status:** unreviewed
+**Type:** {content theme tag}
+**Original:** {tweet URL}
+**Raw file:** content/raw/x-posts/{filename}
+**Ingest source:** bookmark-mining
+
+### Summary
+{2–3 sentence summary}
+
+### Content angles (develop all applicable formats now)
+1. **Hot take**: {provocative read}
+2. **Practical**: {actionable spin}
+3. **Nuanced**: {the "yes, but" angle}
+
+### Content tree
+- **Reply**: {reply opportunity to the original?}
+- **Post**: {standalone angle}
+- **Thread**: {breakdown opportunity}
+- **Article**: {long-form potential}
+- **Series**: {connection to series.md?}
+
+### Actions
+- [ ] Review in content-interview
+```
+
+**Register in index.db:**
+```bash
+sqlite3 content/pipeline/index.db \
+  "INSERT INTO items (id, created_at, source_type, ingest_source, status, current_title, original_url, raw_file)
+   VALUES ('{ID}', '{datetime}', 'x-post', 'bookmark-mining', 'raw',
+           '@{author}: {topic}', '{url}', 'content/raw/x-posts/{filename}');"
+```
+
+**Update `content/inbox/_index.md`** with new item rows.
+
+### Step 7: Present Summary
+
+Show what was captured and what's ready for review:
 
 ```
-## Bookmark Content Candidates
+Bookmark Mining — 2026-03-07
+─────────────────────────────────────────
+Fetched 50 bookmarks, filtered to 8 with content potential.
 
-### 1. {Topic} (by @{author})
-{Tweet summary}
-**Why it's interesting:** {brief explanation}
-**Content angle:** {how you could remix this}
-**Suggested format:** post | quote-tweet | thread | article | research-first
+Captured 8 items to inbox:
+  BM-001  @levelsio — pricing take (high potential)
+  BM-002  @karpathy — training data quality (high)
+  BM-003  @someone — agentic coding patterns (medium)
+  ...
 
-### 2. ...
+Skipped: 42 (political, personal, low potential)
+
+Ready for /content-interview to review.
 ```
 
-### Step 7: User Chooses
+### Step 8: Offer Immediate Action (Optional)
 
-Ask: "Which of these should I work with? Options:"
+If running interactively (not as part of a Cowork scheduled task), offer:
 
-- **Bank it**: Invoke `capture-thought` to save the idea for later (source metadata is preserved — see below)
-- **Post now**: Invoke `thought-to-post` to create a post immediately
-- **Quote tweet**: Draft a quote-tweet response to the original
-- **Research first**: Suggest running the `research` skill to go deeper before creating content
-- **Skip**: Move on
+```
+Want to:
+  A) Review these in /content-interview now
+  B) Workshop the top one immediately (idea-dump style)
+  C) Done — I'll review later
+```
 
-### Step 8: Execute
-
-Based on user choice, delegate to the appropriate skill with the bookmark context as input. Always pass the source metadata block (see below) so downstream skills have full attribution context.
+Based on user choice, delegate to the appropriate skill.
 
 ---
 

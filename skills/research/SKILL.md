@@ -19,10 +19,10 @@ Conduct thorough, opinionated research and produce a written report on $ARGUMENT
 
 ## Folder Structure
 
-Before starting, identify (or ask for) the research folder. It can live anywhere. Once located, use this layout — create directories if they don't exist:
+The default research folder is `research/` in the life repo. Use this layout — create directories if they don't exist:
 
 ```
-{research-folder}/
+research/
 ├── .scratchpad/       # Sub-agent working notes and sub-reports
 │   └── .history/      # Archived / stale research
 └── reports/           # Final published reports only
@@ -132,10 +132,14 @@ The reader wants to know what you actually think based on the evidence.
 ### Report Structure
 
 ```markdown
-# {Topic}: {Opinionated Subtitle}
+---
+id: {YYYYMMDD-RS-NNN}
+date: YYYY-MM-DD
+category: Research Report
+content-status: raw
+---
 
-**Date:** {M-DD-YY}
-**Category:** Research Report
+# {Topic}: {Opinionated Subtitle}
 
 ---
 
@@ -207,6 +211,53 @@ A good research report should:
 
 ---
 
+## Phase 5: Pipeline Integration
+
+After the report is written and saved, register it in the content pipeline so it can be converted to posts, threads, or articles.
+
+### Step 1: Assign ID
+
+```bash
+sqlite3 content/pipeline/index.db \
+  "SELECT id FROM items WHERE id LIKE '$(date +%Y%m%d)-RS-%' ORDER BY id DESC LIMIT 1;"
+```
+
+Increment NNN (start at 001 if no results). Add the `id` to the report's YAML frontmatter.
+
+### Step 2: Register in index.db
+
+```bash
+sqlite3 content/pipeline/index.db \
+  "INSERT INTO items (id, created_at, source_type, ingest_source, status, current_title, raw_file)
+   VALUES ('{ID}', '{datetime}', 'research', 'research', 'raw',
+           '{report title}', 'research/reports/{filename}');"
+```
+
+### Step 3: Write inbox entry
+
+Add an entry to `content/inbox/YYYY-MM-DD.md` with:
+- Executive summary (pulled from the report's Summary section)
+- Content angles:
+  - **Thread**: Key findings distilled into a tweetstorm
+  - **Article**: Full editorial treatment of the report
+  - **Hot take**: One sharp opinion extracted from the findings
+  - **Post**: Single strongest takeaway as a standalone post
+- Content tree — develop all applicable formats now
+
+### Step 4: Update _index.md
+
+Add a row to the Item Registry in `content/inbox/_index.md`.
+
+### Step 5: Notify
+
+```
+Research report saved: research/reports/{filename}
+Registered in pipeline as {ID}.
+Ready for /content-interview to convert to content.
+```
+
+---
+
 ## Scratchpad File Format
 
 Sub-reports saved in `.scratchpad/` should use this format:
@@ -215,7 +266,7 @@ Sub-reports saved in `.scratchpad/` should use this format:
 # {Topic}
 
 **Category:** Technical | Tool | Industry | Learning | Exploration
-**Date Started:** {M-DD-YY}
+**Date Started:** {YYYY-MM-DD}
 **Status:** [ ] Active | [ ] Paused | [x] Complete
 
 ---
