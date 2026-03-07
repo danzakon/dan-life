@@ -14,6 +14,7 @@ A working YouTube monitoring system that:
 - Monitors channels for new videos via RSS
 - Fetches transcripts and thumbnails
 - Extracts screenshots at specific timestamps
+- **Clips video segments** for social media posting with commentary
 - Ingests Watch Later videos (with known limitations)
 - Integrates with the content pipeline (`index.db`, inbox, raw files)
 
@@ -294,6 +295,270 @@ The naming convention `{ID}-{slug}-{timestamp}.jpg` keeps screenshots associated
 
 ---
 
+## Clipping Video Segments for Social Media
+
+This is the workflow for: "I read a transcript, found something interesting at 1:43:00-1:45:00, now I want to clip it, add commentary, and post it."
+
+### The Core Command
+
+yt-dlp's `--download-sections` downloads only the bytes for a segment — no full video download:
+
+```bash
+yt-dlp --download-sections "*1:43:00-1:45:00" \
+  --force-keyframes-at-cuts \
+  -f "bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4]" \
+  --merge-output-format mp4 \
+  -o "clip.%(ext)s" \
+  "https://www.youtube.com/watch?v=XXXXXXXXXXXX"
+```
+
+| Flag | Purpose |
+|------|---------|
+| `--download-sections "*1:43:00-1:45:00"` | Download only this time range. The `*` prefix is required. |
+| `--force-keyframes-at-cuts` | Re-encode at cut points for frame-accurate start/end. Without this, clip may start up to 5 seconds early (nearest keyframe). |
+| `-f "bestvideo[ext=mp4]..."` | Best quality MP4 video + M4A audio, max 1080p |
+| `--merge-output-format mp4` | Output as MP4 container |
+
+### Why `--force-keyframes-at-cuts` Matters
+
+Video is compressed in groups of frames. You can only cleanly cut at a keyframe without re-encoding:
+
+```
+YouTube keyframe spacing (typical):
+├── I ── P ── P ── P ── P ── I ── P ── P ── P ── P ── I ──
+    0s   0.5  1.0  1.5  2.0  2.5  3.0  3.5  4.0  4.5  5.0
+
+Without --force-keyframes-at-cuts:
+  Requested start at 1:43:00 → clip starts at 1:42:57 (nearest keyframe)
+
+With --force-keyframes-at-cuts:
+  Requested start at 1:43:00 → clip starts exactly at 1:43:00 (re-encodes boundary)
+```
+
+The re-encode adds ~30-60 seconds for a 2-minute 1080p clip. Always worth it for social media.
+
+### Adding Burned-In Subtitles
+
+Three-step pipeline:
+
+```
+┌──────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│  1. Download │     │  2. Download +   │     │  3. Encode with  │
+│     clip     │────▶│     trim subs    │────▶│     subs burned  │
+│              │     │                  │     │     in           │
+│  yt-dlp      │     │  yt-dlp + ffmpeg │     │  ffmpeg          │
+│  --download- │     │  --write-auto-sub│     │  -vf subtitles=  │
+│  sections    │     │  + trim to range │     │                  │
+└──────────────┘     └──────────────────┘     └──────────────────┘
+```
+
+```bash
+VIDEO_URL="https://www.youtube.com/watch?v=XXXXXXXXXXXX"
+START="1:43:00"
+END="1:45:00"
+
+# Step 1: Download the clip segment
+yt-dlp --download-sections "*${START}-${END}" \
+  --force-keyframes-at-cuts \
+  -f "bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4]" \
+  --merge-output-format mp4 \
+  -o "clip_raw.mp4" \
+  "$VIDEO_URL"
+
+# Step 2: Download subtitles and trim to clip range
+yt-dlp --write-auto-sub --write-sub --sub-lang en \
+  --sub-format srt --convert-subs srt \
+  --skip-download -o "clip" "$VIDEO_URL"
+
+ffmpeg -i clip.en.srt -ss "$START" -to "$END" clip_trimmed.srt
+
+# Step 3: Burn subtitles + encode for social media
+ffmpeg -i clip_raw.mp4 \
+  -vf "subtitles=clip_trimmed.srt:force_style='FontName=Arial,FontSize=22,PrimaryColour=&H00FFFFFF,BackColour=&H80000000,BorderStyle=4,MarginV=25'" \
+  -c:v libx264 -profile:v high -level 4.0 \
+  -crf 22 -preset medium -pix_fmt yuv420p \
+  -c:a aac -b:a 128k -movflags +faststart -r 30 \
+  clip_final.mp4
+```
+
+### Social Media Video Specs
+
+| Platform | Max Size | Max Duration | Resolution | Notes |
+|----------|---------|-------------|-----------|-------|
+| X (free) | 512 MB | **2:20** | 720p | H.264+AAC required. VP9 rejected. |
+| X (Premium+) | 16 GB | 4 hours | 1080p | |
+| LinkedIn | 5 GB | 10-15 min | 1080p | Under 60s gets most engagement |
+| PostBridge | Handles it | Handles it | Handles it | Upload once, distributes to all platforms |
+
+The 2:20 limit on free X is the key constraint. Most podcast clips will need to be under that.
+
+### Universal Social Media Encode Settings
+
+```bash
+# The safe settings that work on every platform
+ffmpeg -i input.mp4 \
+  -c:v libx264 -profile:v high -level 4.0 \
+  -crf 22 -preset medium -pix_fmt yuv420p \
+  -c:a aac -b:a 128k -movflags +faststart -r 30 \
+  output.mp4
+```
+
+| Rule | Why |
+|------|-----|
+| Always H.264 | X rejects VP9. LinkedIn requires H.264. Only universal codec. |
+| Always `yuv420p` | `yuv444p` is higher quality but many devices can't decode it |
+| Always `-movflags +faststart` | Instagram and some platforms silently reject without this |
+| Always AAC audio | All platforms require or prefer AAC |
+
+### PostBridge Upload Flow for Video Clips
+
+PostBridge fully supports video uploads, which means the clipping workflow can feed directly into the existing publishing pipeline:
+
+```
+┌──────────────┐     ┌───────────────┐     ┌──────────────┐
+│  Clip video  │     │  PostBridge   │     │  PostBridge   │
+│  with yt-dlp │────▶│  media upload │────▶│  create post  │
+│  + ffmpeg    │     │               │     │  with media   │
+└──────────────┘     │  POST /v1/    │     │               │
+                     │  media/create-│     │  POST /v1/    │
+                     │  upload-url   │     │  posts        │
+                     │  + PUT file   │     │  {media: [id]}│
+                     └───────────────┘     └──────────────┘
+```
+
+PostBridge handles all platform-specific transcoding behind the scenes. Upload the MP4 once, it distributes to X, LinkedIn, etc.
+
+### Pipeline Integration: Transcript → Clip → Post
+
+Here's how clipping connects to the existing content pipeline:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Clip Pipeline Flow                            │
+│                                                                  │
+│  1. youtube-monitor fetches transcript                           │
+│     └── content/raw/youtube/20260307-YM-001-karpathy-llms.md    │
+│                                                                  │
+│  2. During content-interview, user identifies a clip-worthy      │
+│     segment: "The part about reasoning at 1:43:00 is gold"      │
+│                                                                  │
+│  3. Clip extraction:                                             │
+│     └── yt-dlp --download-sections → ffmpeg encode               │
+│     └── content/raw/youtube/20260307-YM-001-clip-1h43m.mp4      │
+│                                                                  │
+│  4. Write post with video attachment:                            │
+│     └── content/posts/2026-W10.md (post text + clip reference)  │
+│                                                                  │
+│  5. Queue stage:                                                 │
+│     └── Upload clip to PostBridge → schedule with commentary     │
+│                                                                  │
+│  6. index.db tracks the clip as format: "clip"                   │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Clip File Naming Convention
+
+```
+content/raw/youtube/
+├── 20260307-YM-001-karpathy-llms.md              # transcript
+├── 20260307-YM-001-karpathy-llms-thumb.jpg        # thumbnail
+├── 20260307-YM-001-karpathy-llms-1h43m00s.jpg    # screenshot
+└── 20260307-YM-001-karpathy-llms-1h43m-1h45m.mp4 # clip
+```
+
+### Schema Consideration
+
+The current `format` field in `index.db` supports `post | thread | article | post+article`. Clips could either:
+
+1. **Use existing format field**: A clip is always paired with a post, so `format: "post"` with the clip as an attachment
+2. **Add `clip` as a format**: Treat clips as a first-class content type
+3. **Add a `media_file` column**: Track attached media separately from the content format
+
+Option 1 is simplest and matches reality — a clip is a post with a video attached, not a standalone format.
+
+### Reusable Script: `ytclip.sh`
+
+This belongs in `skills/youtube-monitor/` alongside `fetch-transcript.py`:
+
+```bash
+#!/bin/bash
+# ytclip.sh — Extract a clip from a YouTube video, ready for social media
+#
+# Usage:
+#   ./ytclip.sh <url> <start> <end> [--subs] [--output name]
+#
+# Examples:
+#   ./ytclip.sh "https://youtube.com/watch?v=abc" "1:43:00" "1:45:00"
+#   ./ytclip.sh "https://youtube.com/watch?v=abc" "1:43:00" "1:45:00" --subs
+#   ./ytclip.sh "https://youtube.com/watch?v=abc" "0:30" "2:00" --output my_clip
+
+set -euo pipefail
+
+URL="$1"
+START="$2"
+END="$3"
+SUBS=false
+OUTPUT="clip_$(date +%Y%m%d_%H%M%S)"
+
+shift 3
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --subs) SUBS=true; shift ;;
+    --output) OUTPUT="$2"; shift 2 ;;
+    *) echo "Unknown option: $1"; exit 1 ;;
+  esac
+done
+
+echo "Downloading clip: ${START} to ${END}"
+echo "Subtitles: ${SUBS}"
+
+# Step 1: Download clip segment
+yt-dlp --download-sections "*${START}-${END}" \
+  --force-keyframes-at-cuts \
+  -f "bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4]" \
+  --merge-output-format mp4 \
+  -o "${OUTPUT}_raw.mp4" \
+  "$URL"
+
+if [ "$SUBS" = true ]; then
+  echo "Downloading subtitles..."
+  yt-dlp --write-auto-sub --write-sub --sub-lang en \
+    --sub-format srt --convert-subs srt \
+    --skip-download -o "${OUTPUT}" "$URL" 2>/dev/null || true
+
+  SRT_FILE=$(ls ${OUTPUT}*.srt 2>/dev/null | head -1)
+
+  if [ -n "$SRT_FILE" ]; then
+    ffmpeg -y -i "$SRT_FILE" -ss "$START" -to "$END" "${OUTPUT}_trimmed.srt" 2>/dev/null
+    ffmpeg -y -i "${OUTPUT}_raw.mp4" \
+      -vf "subtitles=${OUTPUT}_trimmed.srt:force_style='FontName=Arial,FontSize=22,PrimaryColour=&H00FFFFFF,BackColour=&H80000000,BorderStyle=4,MarginV=25'" \
+      -c:v libx264 -profile:v high -level 4.0 \
+      -crf 22 -preset medium -pix_fmt yuv420p \
+      -c:a aac -b:a 128k -movflags +faststart -r 30 \
+      "${OUTPUT}.mp4"
+    rm -f "$SRT_FILE" "${OUTPUT}_trimmed.srt"
+  else
+    echo "No subtitles found. Encoding without."
+    SUBS=false
+  fi
+fi
+
+if [ "$SUBS" = false ]; then
+  ffmpeg -y -i "${OUTPUT}_raw.mp4" \
+    -c:v libx264 -profile:v high -level 4.0 \
+    -crf 22 -preset medium -pix_fmt yuv420p \
+    -c:a aac -b:a 128k -movflags +faststart -r 30 \
+    "${OUTPUT}.mp4"
+fi
+
+rm -f "${OUTPUT}_raw.mp4"
+echo "Done: ${OUTPUT}.mp4"
+ls -lh "${OUTPUT}.mp4"
+```
+
+---
+
 ## YouTube Watch Later as an Ingest Source
 
 ### The Reality
@@ -433,7 +698,16 @@ This would need a new source prefix. Suggested: `WL` (watch-later).
 - [ ] Add `--thumbnail` and `--screenshot TIMESTAMP` flags to the transcript script
 - [ ] Store thumbnails alongside transcripts: `{ID}-{slug}-thumb.jpg`
 
-**Phase 3: Watch Later integration**
+**Phase 3: Video clipping**
+
+- [ ] Create `ytclip.sh` in `skills/youtube-monitor/`
+- [ ] Test clip extraction on a real podcast (with and without subs)
+- [ ] Test PostBridge video upload via `/v1/media/create-upload-url`
+- [ ] Update `write-post` skill to handle video attachments
+- [ ] Add clip file naming convention to SYSTEM.md
+- [ ] End-to-end test: transcript → identify segment → clip → post with commentary → schedule
+
+**Phase 4: Watch Later integration**
 
 - [ ] Set up Firefox cookie export workflow
 - [ ] Create `~/.config/youtube/cookies.txt` with valid session
@@ -441,7 +715,7 @@ This would need a new source prefix. Suggested: `WL` (watch-later).
 - [ ] Build watch-later mode into youtube-monitor (or create separate skill)
 - [ ] Test: export Watch Later → dedup → present → ingest
 
-**Phase 4: Automation polish**
+**Phase 5: Automation polish**
 
 - [ ] Add `--cookies` fallback to channel monitoring (for age-restricted videos)
 - [ ] Add cookie expiration detection and user notification
@@ -463,6 +737,10 @@ This would need a new source prefix. Suggested: `WL` (watch-later).
 | `PoTokenRequired` from transcript API | YouTube server-side restriction | No workaround; try again later or use yt-dlp `--write-subs` as fallback |
 | Frame extraction is slow | `-ss` placed after `-i` | Move `-ss` before `-i` for input seeking |
 | yt-dlp `--get-url` returns stale URL | CDN URLs expire after hours | Always resolve and consume in one step |
+| Clip starts a few seconds early | Cutting at nearest keyframe | Add `--force-keyframes-at-cuts` |
+| Clip audio/video out of sync | Separate stream download | Let yt-dlp handle merge; don't use `--get-url` for clips |
+| X rejects video upload | Wrong codec (VP9, HEVC) | Ensure H.264 + AAC in MP4. Use `-c:v libx264 -c:a aac` |
+| Clip exceeds X 2:20 limit | Free tier duration cap | Keep clips under 2:20 or use Premium |
 
 ---
 
