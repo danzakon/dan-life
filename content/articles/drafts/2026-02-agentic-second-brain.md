@@ -1,5 +1,6 @@
 ---
 title: Your Second Brain Finally Works (With an AI Running It)
+content-id: 20260201-SR-001
 status: draft
 platform: blog
 ---

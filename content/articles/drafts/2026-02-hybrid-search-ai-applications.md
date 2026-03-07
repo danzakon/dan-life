@@ -1,5 +1,6 @@
 ---
 title: How the Best AI Tools Are Solving Search (And What You Can Learn From Them)
+content-id: 20260201-SR-002
 status: draft
 platform: blog
 ---

@@ -1,5 +1,6 @@
 ---
 title: CLAUDE.md Files Are a Mess
+content-id: 20260228-SR-001
 status: draft
 platform: x-article
 ---

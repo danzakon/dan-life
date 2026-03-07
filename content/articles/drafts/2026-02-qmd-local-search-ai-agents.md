@@ -1,5 +1,6 @@
 ---
 title: "QMD: What Cutting-Edge Search Looks Like for AI Agents"
+content-id: 20260201-SR-003
 status: draft
 platform: blog
 ---
