@@ -130,14 +130,29 @@ These accounts get a higher priority score in the digest and are always flagged 
 
 Channels are checked for new videos on every ingest run. Transcripts are NOT pulled automatically — the youtube-monitor surfaces new video titles and asks for approval before fetching a transcript.
 
-```
-# Format: {channel-id}  # channel name | keyword filter (optional)
-# Keyword filter: only surface videos whose titles contain these terms (comma-separated)
-# Leave blank to surface all new videos
+Use `ytquery y:channel @handle --limit 5` to check a channel manually.
+Use `ytquery y:rss @handle` to resolve a channel ID from a handle.
 
-# Example:
-# UCxxxxxxxxxxxxxxxx  # Lex Fridman | (no filter — all videos)
-# UCyyyyyyyyyyyyyyyy  # MKBHD | AI, software, coding
+```
+# Format: {channel-id}  # @handle | channel name | keyword filter (optional)
+# Keyword filter: only surface videos whose titles contain these terms (comma-separated)
+# Leave blank to surface all new videos from that channel
+
+# --- AI / ML / Engineering (no filter — all content relevant) ---
+UCSHZKyawb77ixDdsGog4iWA  # @lexfridman | Lex Fridman | AI, LLM, coding, AGI
+UCe4jUOmQPKMDvOkzJpDfMRQ  # @karpathy | Andrej Karpathy | AI, neural, LLM, backprop, GPT, software, coding
+UCsBjURrPoezykLs9EqgamOA  # @fireship | Fireship | AI, TypeScript, web
+UCLKPca3kwwd-B59HNr-_lvA  # @aiDotEngineer | AI Engineer Summit
+UCxBcwypKK-W3GHd_RZ9FZrQ  # @latentspacepod | Latent Space
+UCrDwWp7EBBv4NwvScIpBDOA  # @anthropic-ai | Anthropic
+
+# --- Dev / Tech ---
+UCbRP3c757lWg9M-U7TyEkXA  # @t3dotgg | Theo | TypeScript, Next.js, web dev
+UC8ENHE5xdFSwx71u3fDH5Xw  # @theprimeagen | ThePrimeagen | engineering, systems, coding
+UCcefcZRL2oaA_uBNeo5UOWg  # @ycombinator | Y Combinator | startups, founders
+
+# --- VC / Business ---
+UC9cn0TuPq4dnbTY-CBsm8XA  # @a16z | a16z | AI, investing, enterprise
 ```
 
 ---
