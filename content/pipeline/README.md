@@ -129,12 +129,16 @@ Titles can change at any stage. IDs never do.
 The default mindset is: one signal unlocks a content tree, not a single post. Every inbox item carries angle suggestions and a multiplication assessment. The interview step always offers to generate the full tree, not just one piece.
 
 ```
-ONE SIGNAL → content tree
-  ├── Immediate reply (24hr window — use or lose)
-  ├── Standalone hot take (Twitter/LinkedIn this week)
-  ├── Thread: 5-part breakdown (this week)
-  ├── Article: full treatment (this month)
-  └── Series trigger: connects to N existing thoughts → new series
+ONE SIGNAL → content tree (develop all applicable formats now)
+  ├── Reply — draft and post immediately if time-sensitive
+  ├── Post — draft now, queue for same day or next
+  ├── Thread — draft now, can post same day as the post
+  ├── Article — draft now, can go out same week
+  └── Series — flag connection, plan next episodes
+
+Sequencing when each piece gets posted happens at the queue stage.
+Do not delay drafting because a format feels "longer-term."
+Stories get stale. Develop everything that has merit immediately.
 ```
 
 When generating any piece of content, skills always surface:
@@ -311,12 +315,12 @@ Two-sentence summary of what the source material actually says.
 3. **Nuanced**: "Yes, but here's what most people miss"
 4. **Series fit**: Connects to "The Refinement Era" series
 
-### Content tree
-- **Reply** (24hr): Reply to @levelsio directly — agree/push back
-- **Post** (this week): Standalone hot take on pricing psychology
-- **Thread** (this week): 5 pricing mistakes founders make
-- **Article** (this month): "The pricing trap no one talks about"
-- **Series trigger**: Yes — adds to "Product Thinking" theme
+### Content tree (develop all applicable formats now)
+- **Reply**: Reply to @levelsio directly — agree/push back
+- **Post**: Standalone hot take on pricing psychology
+- **Thread**: 5 pricing mistakes founders make
+- **Article**: "The pricing trap no one talks about"
+- **Series**: Yes — adds to "Product Thinking" theme
 
 ### Actions
 - [ ] Reply to original
