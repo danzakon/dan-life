@@ -112,10 +112,9 @@ When working on documents, update checkboxes as tasks are completed. This provid
 
 When navigating this repo:
 1. Check the relevant directory's CLAUDE.md first for context
-2. Respect the scratchpad/archive system
+2. Follow each directory's conventions — some use scratchpads, some use other tracking systems
 3. Update checkboxes as work progresses
 4. Suggest CLAUDE.md updates when patterns evolve
-5. **Be vigilant about scratchpad hygiene** — proactively check file counts and archive when thresholds are exceeded (default 15, some directories may specify lower)
 
 ---
 
