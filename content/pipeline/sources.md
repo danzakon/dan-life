@@ -10,9 +10,105 @@ These accounts are scraped on every ingest run. Posts since the last run are sur
 
 ```
 # Format: @handle  # description
-@levelsio        # indie hacking, pricing, solo founder
-@karpathy        # AI/ML depth, LLM internals
-@sama            # AI strategy, OpenAI
+
+# --- Tenex ---
+@ArmanHezarkhani  # Tenex
+@businessbarista  # Tenex
+@seejayhess       # Tenex
+
+# --- AI / ML / Engineering ---
+@karpathy         # AI/ML depth, LLM internals
+@sama             # AI strategy, OpenAI
+@bcherny          # TypeScript, developer tools
+@clairevo         # AI, tech
+@trq212           # tech, engineering
+@mitchellh        # systems engineering, Ghostty, Zig
+@aidenybai        # React, JavaScript frameworks
+@thdxr            # SST, serverless, infra
+@RhysSullivan     # TypeScript, Next.js
+@hwchase17        # LangChain, AI agents
+@mattshumer_      # AI agents, prompting
+@DhravyaShah      # AI engineering, dev tools
+@leerob           # Next.js, Vercel, DX
+@rauchg           # Vercel, web dev
+@kepano           # Obsidian, tools for thought
+@mckaywrigley     # AI coding, dev tools
+@theo             # web dev, TypeScript
+@yacineMTB        # AI engineering, open source
+@IterIntellectus  # AI reasoning, research
+@TheGregYang      # AI research, theory
+@AISafetyMemes    # AI safety, memes
+@8teAPi           # AI engineering
+@jxnlco           # AI engineering, structured output
+@mansourtarek_    # AI, tech
+@AravSrinivas     # Perplexity, AI search
+@dwr              # Farcaster, crypto, social
+@andruyeung       # AI, engineering
+
+# --- Founders / Builders ---
+@levelsio         # indie hacking, pricing, solo founder
+@gregisenberg     # community-led growth, startups
+@ryancarson       # tech education, startups
+@ericzakariasson  # startups, engineering leadership
+@kieranklaassen   # startups, product
+@sweatystartup    # bootstrapping, small business
+@bonam            # startups, product
+@snowmaker        # startups, venture
+@codyschneiderxx  # growth, startups
+@tobi             # Shopify, building at scale
+@natfriedman      # AI, ex-GitHub CEO
+@gfodor           # startups, AI
+@jackfriks        # creator economy, building
+@iannuttall       # indie hacking, newsletters
+@apples_jimmy     # building, startups
+@radbackwards     # startups, product
+@bubbleboi        # startups, building
+
+# --- VCs / Investors ---
+@tunguz           # SaaS metrics, VC
+@milesgrimshaw    # venture, enterprise
+@eglyman          # venture, fintech
+@based16z         # a16z, venture
+@danielgross      # AI investing, building
+@alexisohanian    # Reddit co-founder, investing
+@TurnerNovak      # venture, consumer
+@emilyinvc        # venture, tech
+@eladgil          # investing, startups
+@martin_casado    # a16z, enterprise
+@levie            # Box, enterprise SaaS
+@VinnyLingham      # investing, crypto
+
+# --- Business / Media / Thought Leaders ---
+@alliekmiller     # AI strategy, enterprise
+@MollySOShea      # media, tech
+@rowancheung      # AI news, content
+@emollick         # AI in education, research
+@ShaanVP          # business ideas, pods
+@Codie_Sanchez    # SMB acquisition, business
+@thesamparr       # media, entrepreneurship
+@beffjezos        # tech commentary
+@bryan_johnson    # longevity, biohacking
+@tylercowen       # economics, culture
+@BillAckman       # investing, business
+@austin_rief      # Morning Brew, media
+@OfficialLoganK   # tech, AI content
+@johncoogan       # tech, media
+@mattparlmer      # content, business
+
+# --- Creators / Writers ---
+@BrettFromDJ      # creator economy
+@yasser_elsaid_   # content, writing
+@billyjhowell     # writing, content
+@rileybrown       # content, building
+@justinskycak     # math, education
+@iruletheworldmo  # tech, commentary
+@gmiller          # tech, writing
+@ben_m_somers     # writing, business
+@growing_daniel   # growth, content
+@iamgingertrash   # content, creator
+@virattt          # finance, AI
+
+# --- Niche / Misc ---
 ```
 
 ---
@@ -23,6 +119,9 @@ These accounts get a higher priority score in the digest and are always flagged 
 
 ```
 # Format: @handle  # context
+@ArmanHezarkhani  # Tenex — co-founder
+@businessbarista  # Tenex — co-founder
+@seejayhess       # Tenex — co-founder
 ```
 
 ---

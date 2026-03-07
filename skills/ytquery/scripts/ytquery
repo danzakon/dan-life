@@ -1,0 +1,845 @@
+#!/usr/bin/env python3
+"""ytquery - Query YouTube from the command line.
+
+A CLI tool for YouTube data: channel monitoring, video metadata, transcripts,
+thumbnails, screenshots, clips, and Watch Later access. Designed as the YouTube
+equivalent of xquery (for X/Twitter).
+
+Dependencies (must be installed separately):
+    pip install yt-dlp youtube-transcript-api
+    brew install ffmpeg deno
+
+Config: ~/.config/ytquery/.env
+    # Optional: cookie file for Watch Later / age-restricted content
+    YOUTUBE_COOKIES=/path/to/cookies.txt
+"""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+import urllib.request
+import urllib.error
+from datetime import datetime, timezone
+from pathlib import Path
+from xml.etree import ElementTree
+
+CONFIG_DIR = Path.home() / ".config" / "ytquery"
+CONFIG_FILE = CONFIG_DIR / ".env"
+
+USER_AGENT = "ytquery/1.0 (Claude Code Skill)"
+YT_RSS_BASE = "https://www.youtube.com/feeds/videos.xml"
+YT_THUMBNAIL_BASE = "https://img.youtube.com/vi"
+
+
+# =============================================================================
+# Config
+# =============================================================================
+
+def load_config() -> dict:
+    """Load config from file and environment."""
+    config = {}
+
+    if CONFIG_FILE.exists():
+        with open(CONFIG_FILE) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    key, _, value = line.partition("=")
+                    key, value = key.strip(), value.strip()
+                    if value and value[0] in ("'", '"') and value[-1] == value[0]:
+                        value = value[1:-1]
+                    if key and value:
+                        config[key] = value
+
+    # Environment overrides
+    config["YOUTUBE_COOKIES"] = (
+        os.environ.get("YOUTUBE_COOKIES") or config.get("YOUTUBE_COOKIES", "")
+    )
+
+    return config
+
+
+# =============================================================================
+# Helpers
+# =============================================================================
+
+def extract_video_id(url: str) -> str | None:
+    """Extract YouTube video ID from URL or bare ID."""
+    patterns = [
+        r'(?:v=|/v/|youtu\.be/|/embed/|/shorts/)([A-Za-z0-9_-]{11})',
+        r'^([A-Za-z0-9_-]{11})$',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    return None
+
+
+def format_duration(seconds: int | float) -> str:
+    """Format seconds as H:MM:SS or M:SS."""
+    seconds = int(seconds)
+    h, remainder = divmod(seconds, 3600)
+    m, s = divmod(remainder, 60)
+    if h > 0:
+        return f"{h}:{m:02d}:{s:02d}"
+    return f"{m}:{s:02d}"
+
+
+def format_number(n: int) -> str:
+    """Format number with K/M suffixes."""
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    if n >= 1_000:
+        return f"{n / 1_000:.1f}K"
+    return str(n)
+
+
+def check_dependency(name: str, install_hint: str):
+    """Check if a CLI tool is available, exit with hint if not."""
+    try:
+        subprocess.run(
+            [name, "--version"], capture_output=True, timeout=10
+        )
+    except FileNotFoundError:
+        sys.stderr.write(f"Error: {name} not found.\n")
+        sys.stderr.write(f"Install: {install_hint}\n")
+        sys.exit(1)
+    except subprocess.TimeoutExpired:
+        pass  # some tools don't support --version cleanly
+
+
+def run_ytdlp(args: list, config: dict, timeout: int = 60) -> subprocess.CompletedProcess:
+    """Run yt-dlp with optional cookie config."""
+    cmd = ["yt-dlp"] + args
+    cookies = config.get("YOUTUBE_COOKIES", "")
+    if cookies and os.path.exists(cookies):
+        cmd = ["yt-dlp", "--cookies", cookies] + args
+
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+
+
+# =============================================================================
+# y:channel — Recent videos from a channel
+# =============================================================================
+
+def cmd_channel(handle: str, limit: int, config: dict, as_json: bool):
+    """Get recent videos from a YouTube channel."""
+    check_dependency("yt-dlp", "pip install yt-dlp && brew install deno")
+
+    # Normalize handle to URL
+    handle = handle.lstrip("@")
+    url = f"https://www.youtube.com/@{handle}/videos"
+
+    result = run_ytdlp(
+        [
+            "--flat-playlist", "--lazy-playlist",
+            "-I", f":{limit}",
+            "--dump-json",
+            url,
+        ],
+        config,
+        timeout=120,
+    )
+
+    if result.returncode != 0:
+        sys.stderr.write(f"Error: {result.stderr.strip()}\n")
+        sys.exit(1)
+
+    videos = []
+    for line in result.stdout.strip().split("\n"):
+        if line.strip():
+            try:
+                videos.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+
+    if as_json:
+        print(json.dumps(videos, indent=2))
+        return
+
+    if not videos:
+        print(f"No videos found for @{handle}")
+        return
+
+    # Get channel name from first video
+    channel_name = videos[0].get("channel", handle)
+    print(f"@{handle} ({channel_name})")
+    print(f"{'─' * 60}")
+
+    for i, v in enumerate(videos, 1):
+        title = v.get("title", "Untitled")
+        vid = v.get("id", "")
+        duration = v.get("duration")
+        duration_str = format_duration(duration) if duration else "?"
+        views = v.get("view_count")
+        view_str = format_number(views) if views else "?"
+        url = v.get("url", f"https://youtube.com/watch?v={vid}")
+
+        print(f"  {i}. {title}")
+        print(f"     {duration_str} | {view_str} views | {url}")
+
+    print(f"\n--- {len(videos)} videos ---")
+
+
+# =============================================================================
+# y:video — Video metadata
+# =============================================================================
+
+def cmd_video(url: str, config: dict, as_json: bool):
+    """Get detailed metadata for a video."""
+    check_dependency("yt-dlp", "pip install yt-dlp && brew install deno")
+
+    result = run_ytdlp(
+        ["--skip-download", "--dump-json", url],
+        config,
+        timeout=60,
+    )
+
+    if result.returncode != 0:
+        sys.stderr.write(f"Error: {result.stderr.strip()}\n")
+        sys.exit(1)
+
+    data = json.loads(result.stdout)
+
+    if as_json:
+        print(json.dumps(data, indent=2))
+        return
+
+    title = data.get("title", "Untitled")
+    channel = data.get("channel", data.get("uploader", "Unknown"))
+    duration = data.get("duration")
+    views = data.get("view_count", 0)
+    likes = data.get("like_count", 0)
+    upload_date = data.get("upload_date", "unknown")
+    description = data.get("description", "")[:300]
+    vid = data.get("id", "")
+
+    # Format upload date
+    if upload_date and upload_date != "unknown":
+        try:
+            upload_date = f"{upload_date[:4]}-{upload_date[4:6]}-{upload_date[6:8]}"
+        except (IndexError, ValueError):
+            pass
+
+    print(f"{title}")
+    print(f"{'─' * 60}")
+    print(f"Channel:  {channel}")
+    print(f"Duration: {format_duration(duration) if duration else '?'}")
+    print(f"Views:    {format_number(views)}")
+    print(f"Likes:    {format_number(likes)}")
+    print(f"Uploaded: {upload_date}")
+    print(f"URL:      https://youtube.com/watch?v={vid}")
+    if description:
+        print(f"\n{description}{'...' if len(data.get('description', '')) > 300 else ''}")
+
+
+# =============================================================================
+# y:transcript — Fetch transcript
+# =============================================================================
+
+def cmd_transcript(url: str, config: dict, as_json: bool, output: str | None):
+    """Fetch video transcript."""
+    video_id = extract_video_id(url)
+    if not video_id:
+        sys.stderr.write(f"Error: Could not extract video ID from: {url}\n")
+        sys.exit(1)
+
+    try:
+        from youtube_transcript_api import YouTubeTranscriptApi
+    except ImportError:
+        sys.stderr.write("Error: youtube-transcript-api not installed.\n")
+        sys.stderr.write("Install: pip install youtube-transcript-api\n")
+        sys.exit(1)
+
+    ytt_api = YouTubeTranscriptApi()
+
+    try:
+        transcript_list = ytt_api.list(video_id)
+
+        # Prefer manual English, then auto English, then anything
+        transcript = None
+        try:
+            transcript = transcript_list.find_manually_created_transcript(["en"])
+        except Exception:
+            try:
+                transcript = transcript_list.find_generated_transcript(["en"])
+            except Exception:
+                for t in transcript_list:
+                    transcript = t
+                    break
+
+        if transcript is None:
+            sys.stderr.write("Error: No transcript available for this video.\n")
+            sys.exit(1)
+
+        fetched = transcript.fetch()
+        raw_data = fetched.to_raw_data()
+        lang = transcript.language_code
+        is_generated = transcript.is_generated
+
+    except Exception as e:
+        sys.stderr.write(f"Error fetching transcript: {e}\n")
+        sys.exit(1)
+
+    if as_json:
+        result = {
+            "video_id": video_id,
+            "language": lang,
+            "is_generated": is_generated,
+            "segments": raw_data,
+        }
+        text = json.dumps(result, indent=2)
+    else:
+        lines = []
+        for entry in raw_data:
+            ts = format_duration(entry["start"])
+            text_line = entry["text"].replace("\n", " ").strip()
+            lines.append(f"[{ts}] {text_line}")
+
+        header = (
+            f"Transcript: {video_id}\n"
+            f"Language: {lang} ({'auto-generated' if is_generated else 'manual'})\n"
+            f"{'─' * 60}\n"
+        )
+        text = header + "\n".join(lines)
+
+    if output:
+        Path(output).parent.mkdir(parents=True, exist_ok=True)
+        with open(output, "w") as f:
+            f.write(text)
+        print(f"Saved: {output}")
+    else:
+        print(text)
+
+
+# =============================================================================
+# y:thumbnail — Download thumbnail
+# =============================================================================
+
+def cmd_thumbnail(url: str, output: str | None):
+    """Download video thumbnail."""
+    video_id = extract_video_id(url)
+    if not video_id:
+        sys.stderr.write(f"Error: Could not extract video ID from: {url}\n")
+        sys.exit(1)
+
+    output = output or f"{video_id}-thumb.jpg"
+
+    # Try maxresdefault first, fall back to hqdefault
+    for quality in ["maxresdefault", "hqdefault"]:
+        thumb_url = f"{YT_THUMBNAIL_BASE}/{video_id}/{quality}.jpg"
+        try:
+            req = urllib.request.Request(thumb_url, headers={"User-Agent": USER_AGENT})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = resp.read()
+                with open(output, "wb") as f:
+                    f.write(data)
+                print(f"Saved: {output} ({quality}, {len(data)} bytes)")
+                return
+        except urllib.error.HTTPError as e:
+            if e.code == 404 and quality == "maxresdefault":
+                continue
+            sys.stderr.write(f"Error downloading thumbnail: {e}\n")
+            sys.exit(1)
+
+
+# =============================================================================
+# y:screenshot — Frame at timestamp
+# =============================================================================
+
+def cmd_screenshot(url: str, timestamp: str, config: dict, output: str | None):
+    """Extract a frame at a specific timestamp."""
+    check_dependency("yt-dlp", "pip install yt-dlp && brew install deno")
+    check_dependency("ffmpeg", "brew install ffmpeg")
+
+    video_id = extract_video_id(url) or "screenshot"
+    ts_slug = timestamp.replace(":", "h", 1).replace(":", "m", 1) + "s"
+    output = output or f"{video_id}-{ts_slug}.jpg"
+
+    sys.stderr.write(f"Resolving stream URL...\n")
+
+    result = run_ytdlp(
+        ["-f", "bv*[height<=1080]", "--get-url", url],
+        config,
+        timeout=30,
+    )
+
+    if result.returncode != 0:
+        sys.stderr.write(f"Error: {result.stderr.strip()}\n")
+        sys.exit(1)
+
+    stream_url = result.stdout.strip()
+
+    sys.stderr.write(f"Extracting frame at {timestamp}...\n")
+
+    ffmpeg_result = subprocess.run(
+        [
+            "ffmpeg", "-ss", timestamp,
+            "-i", stream_url,
+            "-frames:v", "1",
+            "-q:v", "2",
+            "-y", output,
+        ],
+        capture_output=True, text=True, timeout=60,
+    )
+
+    if ffmpeg_result.returncode != 0:
+        sys.stderr.write(f"Error: ffmpeg failed\n{ffmpeg_result.stderr[:500]}\n")
+        sys.exit(1)
+
+    size = os.path.getsize(output)
+    print(f"Saved: {output} ({size} bytes)")
+
+
+# =============================================================================
+# y:clip — Extract video segment
+# =============================================================================
+
+def cmd_clip(url: str, start: str, end: str, config: dict,
+             output: str | None, with_subs: bool):
+    """Extract a video clip between two timestamps."""
+    check_dependency("yt-dlp", "pip install yt-dlp && brew install deno")
+    check_dependency("ffmpeg", "brew install ffmpeg")
+
+    video_id = extract_video_id(url) or "clip"
+    start_slug = start.replace(":", "h", 1).replace(":", "m", 1)
+    end_slug = end.replace(":", "h", 1).replace(":", "m", 1)
+    base_name = output or f"{video_id}-{start_slug}-{end_slug}"
+    raw_file = f"{base_name}_raw.mp4"
+    final_file = f"{base_name}.mp4"
+
+    # Step 1: Download clip segment
+    sys.stderr.write(f"Downloading clip: {start} to {end}\n")
+
+    dl_args = [
+        "--download-sections", f"*{start}-{end}",
+        "--force-keyframes-at-cuts",
+        "-f", "bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4]",
+        "--merge-output-format", "mp4",
+        "-o", raw_file,
+        url,
+    ]
+
+    result = run_ytdlp(dl_args, config, timeout=300)
+
+    if result.returncode != 0:
+        sys.stderr.write(f"Error downloading clip: {result.stderr.strip()}\n")
+        sys.exit(1)
+
+    # Find the actual output file (yt-dlp may add suffix)
+    if not os.path.exists(raw_file):
+        # yt-dlp sometimes adds video title to filename
+        candidates = [f for f in os.listdir(".") if f.endswith(".mp4") and "_raw" in f]
+        if candidates:
+            raw_file = sorted(candidates, key=os.path.getmtime)[-1]
+        else:
+            sys.stderr.write("Error: Could not find downloaded clip file.\n")
+            sys.exit(1)
+
+    # Step 2: Optional subtitles
+    srt_file = None
+    if with_subs:
+        sys.stderr.write("Downloading subtitles...\n")
+        sub_result = run_ytdlp(
+            [
+                "--write-auto-sub", "--write-sub", "--sub-lang", "en",
+                "--sub-format", "srt", "--convert-subs", "srt",
+                "--skip-download",
+                "-o", f"{base_name}_sub",
+                url,
+            ],
+            config,
+            timeout=60,
+        )
+
+        # Find the SRT file
+        for f in os.listdir("."):
+            if f.startswith(f"{base_name}_sub") and f.endswith(".srt"):
+                # Trim subtitles to clip range
+                trimmed_srt = f"{base_name}_trimmed.srt"
+                trim_result = subprocess.run(
+                    ["ffmpeg", "-y", "-i", f, "-ss", start, "-to", end, trimmed_srt],
+                    capture_output=True, text=True, timeout=30,
+                )
+                if trim_result.returncode == 0 and os.path.exists(trimmed_srt):
+                    srt_file = trimmed_srt
+                os.unlink(f)
+                break
+
+    # Step 3: Encode for social media
+    sys.stderr.write("Encoding for social media...\n")
+
+    ffmpeg_args = [
+        "ffmpeg", "-y", "-i", raw_file,
+    ]
+
+    if srt_file:
+        ffmpeg_args += [
+            "-vf", (
+                f"subtitles={srt_file}:force_style="
+                "'FontName=Arial,FontSize=22,"
+                "PrimaryColour=&H00FFFFFF,"
+                "BackColour=&H80000000,"
+                "BorderStyle=4,MarginV=25'"
+            ),
+        ]
+
+    ffmpeg_args += [
+        "-c:v", "libx264", "-profile:v", "high", "-level", "4.0",
+        "-crf", "22", "-preset", "medium",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "128k",
+        "-movflags", "+faststart",
+        "-r", "30",
+        final_file,
+    ]
+
+    encode_result = subprocess.run(
+        ffmpeg_args, capture_output=True, text=True, timeout=600,
+    )
+
+    if encode_result.returncode != 0:
+        sys.stderr.write(f"Error encoding: {encode_result.stderr[:500]}\n")
+        sys.exit(1)
+
+    # Clean up
+    if os.path.exists(raw_file):
+        os.unlink(raw_file)
+    if srt_file and os.path.exists(srt_file):
+        os.unlink(srt_file)
+
+    size = os.path.getsize(final_file)
+    duration_sec = _get_duration(final_file)
+    duration_str = format_duration(duration_sec) if duration_sec else "?"
+
+    print(f"Saved: {final_file}")
+    print(f"  Duration: {duration_str}")
+    print(f"  Size: {size / 1_000_000:.1f} MB")
+    if size > 512_000_000:
+        sys.stderr.write("  Warning: File exceeds X free tier limit (512 MB)\n")
+    if duration_sec and duration_sec > 140:
+        sys.stderr.write("  Warning: Duration exceeds X free tier limit (2:20)\n")
+
+
+def _get_duration(filepath: str) -> float | None:
+    """Get video duration using ffprobe."""
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe", "-v", "quiet",
+                "-show_entries", "format=duration",
+                "-of", "json", filepath,
+            ],
+            capture_output=True, text=True, timeout=10,
+        )
+        data = json.loads(result.stdout)
+        return float(data["format"]["duration"])
+    except Exception:
+        return None
+
+
+# =============================================================================
+# y:watchlater — Watch Later playlist
+# =============================================================================
+
+def cmd_watchlater(limit: int, config: dict, as_json: bool):
+    """List videos in Watch Later playlist (requires cookies)."""
+    check_dependency("yt-dlp", "pip install yt-dlp && brew install deno")
+
+    cookies = config.get("YOUTUBE_COOKIES", "")
+    if not cookies or not os.path.exists(cookies):
+        sys.stderr.write("Error: Watch Later requires a YouTube cookie file.\n\n")
+        sys.stderr.write("Setup:\n")
+        sys.stderr.write("  1. Install 'Get cookies.txt LOCALLY' Firefox extension\n")
+        sys.stderr.write("  2. Open incognito window, log into YouTube\n")
+        sys.stderr.write("  3. Navigate to youtube.com/robots.txt\n")
+        sys.stderr.write("  4. Export cookies, save to ~/.config/ytquery/cookies.txt\n")
+        sys.stderr.write("  5. Close incognito window immediately\n\n")
+        sys.stderr.write(f"Then add to {CONFIG_FILE}:\n")
+        sys.stderr.write("  YOUTUBE_COOKIES=~/.config/ytquery/cookies.txt\n")
+        sys.exit(1)
+
+    result = run_ytdlp(
+        [
+            "--flat-playlist", "--lazy-playlist",
+            "-I", f":{limit}",
+            "--dump-json",
+            "https://www.youtube.com/playlist?list=WL",
+        ],
+        config,
+        timeout=120,
+    )
+
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        if "cookies" in stderr.lower() or "sign in" in stderr.lower():
+            sys.stderr.write("Error: Cookies expired or invalid.\n")
+            sys.stderr.write("Re-export cookies from an incognito session.\n")
+        else:
+            sys.stderr.write(f"Error: {stderr}\n")
+        sys.exit(1)
+
+    videos = []
+    for line in result.stdout.strip().split("\n"):
+        if line.strip():
+            try:
+                videos.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+
+    if as_json:
+        print(json.dumps(videos, indent=2))
+        return
+
+    if not videos:
+        print("Watch Later is empty.")
+        return
+
+    print("Watch Later")
+    print(f"{'─' * 60}")
+
+    for i, v in enumerate(videos, 1):
+        title = v.get("title", "Untitled")
+        vid = v.get("id", "")
+        channel = v.get("channel", v.get("uploader", "Unknown"))
+        duration = v.get("duration")
+        duration_str = format_duration(duration) if duration else "?"
+        url = v.get("url", f"https://youtube.com/watch?v={vid}")
+
+        print(f"  {i}. {title}")
+        print(f"     {channel} | {duration_str} | {url}")
+
+    print(f"\n--- {len(videos)} videos ---")
+
+
+# =============================================================================
+# y:search — Search YouTube
+# =============================================================================
+
+def cmd_search(query: str, limit: int, config: dict, as_json: bool):
+    """Search YouTube for videos."""
+    check_dependency("yt-dlp", "pip install yt-dlp && brew install deno")
+
+    result = run_ytdlp(
+        [
+            "--flat-playlist", "--lazy-playlist",
+            "-I", f":{limit}",
+            "--dump-json",
+            f"ytsearch{limit}:{query}",
+        ],
+        config,
+        timeout=60,
+    )
+
+    if result.returncode != 0:
+        sys.stderr.write(f"Error: {result.stderr.strip()}\n")
+        sys.exit(1)
+
+    videos = []
+    for line in result.stdout.strip().split("\n"):
+        if line.strip():
+            try:
+                videos.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+
+    if as_json:
+        print(json.dumps(videos, indent=2))
+        return
+
+    if not videos:
+        print(f"No results for: {query}")
+        return
+
+    print(f"Search: {query}")
+    print(f"{'─' * 60}")
+
+    for i, v in enumerate(videos, 1):
+        title = v.get("title", "Untitled")
+        vid = v.get("id", "")
+        channel = v.get("channel", v.get("uploader", "Unknown"))
+        duration = v.get("duration")
+        duration_str = format_duration(duration) if duration else "?"
+        views = v.get("view_count")
+        view_str = format_number(views) if views else "?"
+        url = v.get("url", f"https://youtube.com/watch?v={vid}")
+
+        print(f"  {i}. {title}")
+        print(f"     {channel} | {duration_str} | {view_str} views | {url}")
+
+    print(f"\n--- {len(videos)} results ---")
+
+
+# =============================================================================
+# y:rss — Get channel RSS feed URL
+# =============================================================================
+
+def cmd_rss(handle: str, config: dict, as_json: bool):
+    """Get the RSS feed URL for a YouTube channel."""
+    check_dependency("yt-dlp", "pip install yt-dlp && brew install deno")
+
+    handle = handle.lstrip("@")
+    url = f"https://www.youtube.com/@{handle}"
+
+    result = run_ytdlp(
+        [
+            "--playlist-items", "0",
+            "-O", "playlist:%(channel_id)s",
+            url,
+        ],
+        config,
+        timeout=30,
+    )
+
+    if result.returncode != 0:
+        sys.stderr.write(f"Error: {result.stderr.strip()}\n")
+        sys.exit(1)
+
+    channel_id = result.stdout.strip()
+    if not channel_id or channel_id == "NA":
+        sys.stderr.write(f"Error: Could not resolve channel ID for @{handle}\n")
+        sys.exit(1)
+
+    rss_url = f"{YT_RSS_BASE}?channel_id={channel_id}"
+
+    if as_json:
+        print(json.dumps({"handle": handle, "channel_id": channel_id, "rss_url": rss_url}))
+    else:
+        print(f"@{handle}")
+        print(f"Channel ID: {channel_id}")
+        print(f"RSS URL:    {rss_url}")
+
+
+# =============================================================================
+# Main
+# =============================================================================
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Query YouTube from the command line",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Commands:
+  ytquery y:channel @handle          Recent videos from a channel
+  ytquery y:video <url>              Video metadata (title, duration, etc.)
+  ytquery y:transcript <url>         Fetch transcript text
+  ytquery y:thumbnail <url>          Download video thumbnail
+  ytquery y:screenshot <url> <ts>    Extract frame at timestamp
+  ytquery y:clip <url> <start> <end> Extract video clip for social media
+  ytquery y:watchlater               List Watch Later playlist
+  ytquery y:search "query"           Search YouTube
+  ytquery y:rss @handle              Get channel RSS feed URL
+
+Options:
+  --json             Raw JSON output
+  --limit N          Number of results (default: 10)
+  --output PATH      Output file path (for transcript, thumbnail, screenshot, clip)
+  --subs             Burn subtitles into clip (for y:clip)
+
+Config: ~/.config/ytquery/.env
+  YOUTUBE_COOKIES=/path/to/cookies.txt   # For Watch Later + age-restricted
+
+Dependencies:
+  pip install yt-dlp youtube-transcript-api
+  brew install ffmpeg deno
+""",
+    )
+    parser.add_argument("command", nargs="*", help="y:command and arguments")
+    parser.add_argument("--json", action="store_true", help="Output raw JSON")
+    parser.add_argument("--limit", type=int, default=10, help="Results limit")
+    parser.add_argument("--output", "-o", help="Output file path")
+    parser.add_argument("--subs", action="store_true", help="Burn subtitles into clip")
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+
+    config = load_config()
+
+    # Parse command
+    raw = " ".join(args.command)
+
+    if raw.startswith("y:"):
+        parts = raw.split(None, 1)
+        command = parts[0].lower()
+        rest = parts[1] if len(parts) > 1 else ""
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+    # Route commands
+    if command == "y:channel":
+        if not rest:
+            sys.stderr.write("Usage: ytquery y:channel @handle\n")
+            sys.exit(1)
+        cmd_channel(rest, args.limit, config, args.json)
+
+    elif command == "y:video":
+        if not rest:
+            sys.stderr.write("Usage: ytquery y:video <url_or_id>\n")
+            sys.exit(1)
+        cmd_video(rest, config, args.json)
+
+    elif command == "y:transcript":
+        if not rest:
+            sys.stderr.write("Usage: ytquery y:transcript <url_or_id>\n")
+            sys.exit(1)
+        cmd_transcript(rest, config, args.json, args.output)
+
+    elif command == "y:thumbnail":
+        if not rest:
+            sys.stderr.write("Usage: ytquery y:thumbnail <url_or_id>\n")
+            sys.exit(1)
+        cmd_thumbnail(rest, args.output)
+
+    elif command == "y:screenshot":
+        rest_parts = rest.split(None, 1)
+        if len(rest_parts) < 2:
+            sys.stderr.write("Usage: ytquery y:screenshot <url> <timestamp>\n")
+            sys.stderr.write("Example: ytquery y:screenshot URL 1:23:45\n")
+            sys.exit(1)
+        cmd_screenshot(rest_parts[0], rest_parts[1], config, args.output)
+
+    elif command == "y:clip":
+        rest_parts = rest.split(None, 2)
+        if len(rest_parts) < 3:
+            sys.stderr.write("Usage: ytquery y:clip <url> <start> <end>\n")
+            sys.stderr.write("Example: ytquery y:clip URL 1:43:00 1:45:00\n")
+            sys.exit(1)
+        cmd_clip(rest_parts[0], rest_parts[1], rest_parts[2],
+                 config, args.output, args.subs)
+
+    elif command == "y:watchlater":
+        cmd_watchlater(args.limit, config, args.json)
+
+    elif command == "y:search":
+        if not rest:
+            sys.stderr.write("Usage: ytquery y:search \"query\"\n")
+            sys.exit(1)
+        cmd_search(rest, args.limit, config, args.json)
+
+    elif command == "y:rss":
+        if not rest:
+            sys.stderr.write("Usage: ytquery y:rss @handle\n")
+            sys.exit(1)
+        cmd_rss(rest, config, args.json)
+
+    else:
+        sys.stderr.write(f"Unknown command: {command}\n")
+        sys.stderr.write(
+            "Available: y:channel, y:video, y:transcript, y:thumbnail, "
+            "y:screenshot, y:clip, y:watchlater, y:search, y:rss\n"
+        )
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

@@ -27,7 +27,8 @@ Every item gets an ID at ingestion: `YYYYMMDD-{SOURCE}-NNN`. Source prefixes pre
 | `BM` | bookmark-mining |
 | `XM` | x-account-monitor |
 | `RM` | reply-monitor |
-| `YM` | youtube-monitor |
+| `YM` | youtube-monitor (channel monitoring) |
+| `WL` | watch-later-mining |
 | `SR` | save-raw (manual) |
 | `ID` | idea-dump |
 | `RS` | research |
@@ -167,7 +168,8 @@ All ingest agents share the same output contract:
 - `bookmark-mining` — X bookmarks via xquery
 - `x-account-monitor` — accounts from `sources.md` via xquery
 - `reply-monitor` — replies to @danzakon via xquery
-- `youtube-monitor` — channels from `sources.md`, transcript on approval
+- `youtube-monitor` — channels from `sources.md` via ytquery, transcript on approval
+- `watch-later-mining` — YouTube Watch Later via ytquery (requires cookie setup)
 
 **Manual agents (on-demand):**
 - `save-raw` — any URL or pasted content
@@ -330,7 +332,9 @@ The `idea-dump` skill clusters raw thoughts, identifies themes, and surfaces ser
 
 ### New Skills (DONE)
 - [x] `idea-dump` — conversational content workshop
-- [x] `youtube-monitor` — channel monitoring + transcript fetching (includes `fetch-transcript.py`)
+- [x] `youtube-monitor` — channel monitoring + transcript fetching (uses ytquery CLI)
+- [x] `watch-later-mining` — YouTube Watch Later ingest, parallel to bookmark-mining
+- [x] `ytquery` — YouTube CLI tool (y:channel, y:video, y:transcript, y:thumbnail, y:screenshot, y:clip, y:watchlater, y:search, y:rss)
 - [x] `content-digest` — score + rank inbox items
 - [x] `content-interview` — interactive inbox review → briefs
 - [x] `save-raw` — manual URL/content ingest
@@ -351,11 +355,14 @@ The `idea-dump` skill clusters raw thoughts, identifies themes, and surfaces ser
 
 ### Infrastructure
 - [x] Populate `sources.md` with actual X accounts + YouTube channels
+- [ ] Install ytquery dependencies: `pip install yt-dlp youtube-transcript-api && brew install ffmpeg deno`
+- [ ] Symlink ytquery to PATH: `ln -sf ~/dev/life/skills/ytquery/scripts/ytquery ~/.local/bin/ytquery`
+- [ ] Set up YouTube cookies for Watch Later: export from Firefox incognito, add `YOUTUBE_COOKIES` to `~/.config/ytquery/.env`
+- [ ] Add YouTube channel IDs to `sources.md` (use `ytquery y:rss @handle` to resolve IDs)
 - [ ] Add Morning Ingest Cowork task (7:00 AM)
 - [ ] Add Morning Digest Cowork task (7:30 AM)
 - [ ] Update Daily Scheduler Cowork task (reference new paths)
 - [ ] Update Weekly Review Cowork task (query index.db)
-- [ ] Install `youtube-transcript-api` and test on a real video
 - [ ] End-to-end test: idea-dump → brief → write-post → queue
 - [ ] `tutorials/` folder structure created
 
