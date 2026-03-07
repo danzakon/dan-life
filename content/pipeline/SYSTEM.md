@@ -31,6 +31,7 @@ Every item gets an ID at ingestion: `YYYYMMDD-{SOURCE}-NNN`. Source prefixes pre
 | `SR` | save-raw (manual) |
 | `ID` | idea-dump |
 | `RS` | research |
+| `TU` | tutorial |
 
 ### 3. Develop everything now, sequence at queue time
 Do not delay drafting because a format feels "longer-term." Stories get stale. All applicable formats (reply, post, thread, article) are developed immediately. When each piece gets posted is decided at the queue stage.
@@ -124,8 +125,8 @@ See `schema.sql` for the authoritative version.
 CREATE TABLE items (
   id              TEXT PRIMARY KEY,   -- YYYYMMDD-SRC-NNN
   created_at      TEXT NOT NULL,
-  source_type     TEXT,               -- x-post | x-article | youtube | web | research | thought
-  ingest_source   TEXT,               -- bookmark-mining | x-account-monitor | etc.
+  source_type     TEXT,               -- x-post | x-article | youtube | web | research | thought | tutorial
+  ingest_source   TEXT,               -- bookmark-mining | x-account-monitor | ... | research | tutorial
   status          TEXT NOT NULL DEFAULT 'raw',
                                       -- raw → inbox → approved → brief → draft → refined → queued → published
   current_title   TEXT,
@@ -330,7 +331,7 @@ The `idea-dump` skill clusters raw thoughts, identifies themes, and surfaces ser
 - [ ] `x-account-monitor` — scrape sources.md X accounts via xquery
 - [ ] `reply-monitor` — surface replies to @danzakon
 - [ ] `db-rebuild` — reconstruct index.db from file frontmatter
-- [ ] `tutorial` — practical technical guide creation (parallel to research)
+- [x] `tutorial` — practical technical guide creation (parallel to research)
 
 ### Skill Rewrites (UPDATE)
 - [ ] `content-pipeline` — full rewrite as session orchestrator

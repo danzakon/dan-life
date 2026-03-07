@@ -10,6 +10,7 @@ The `index.db` SQLite database is the authoritative source — this file mirrors
 
 | Date | Items | Reviewed | Status |
 |------|-------|----------|--------|
+| 2026-03-07 | 1 | 0 | unreviewed |
 
 ---
 
@@ -17,3 +18,4 @@ The `index.db` SQLite database is the authoritative source — this file mirrors
 
 | ID | Date | Source | Type | Current Title | Status |
 |----|------|--------|------|---------------|--------|
+| 20260307-TU-001 | 2026-03-07 | tutorial | tutorial | How to Run Claude Code Agent Teams with Visible Split Panes in Ghostty | raw |

@@ -1,3 +1,11 @@
+---
+id: 20260307-TU-001
+date: 2026-03-07
+category: Tutorial
+status: complete
+content-status: raw
+---
+
 # How to Run Claude Code Agent Teams with Visible Split Panes in Ghostty
 
 **Date:** 2026-03-07

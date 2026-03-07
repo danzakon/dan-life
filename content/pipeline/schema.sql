@@ -7,8 +7,8 @@
 CREATE TABLE IF NOT EXISTS items (
   id              TEXT PRIMARY KEY,   -- e.g., 20260307-BM-001
   created_at      TEXT NOT NULL,      -- ISO 8601 UTC
-  source_type     TEXT,               -- x-post | x-article | youtube | web | research | thought
-  ingest_source   TEXT,               -- bookmark-mining | x-account-monitor | reply-monitor | youtube-monitor | save-raw | idea-dump | research
+  source_type     TEXT,               -- x-post | x-article | youtube | web | research | thought | tutorial
+  ingest_source   TEXT,               -- bookmark-mining | x-account-monitor | reply-monitor | youtube-monitor | save-raw | idea-dump | research | tutorial
   status          TEXT NOT NULL DEFAULT 'raw',
                                       -- raw → inbox → approved → brief → draft → refined → queued → published
   current_title   TEXT,               -- mutable; reflects latest working title
