@@ -20,10 +20,10 @@ Use when:
 
 - `content/pipeline/strategy.md` — content themes and hot topics
 - `content/pipeline/series.md` — active series (check for connections)
-- `content/.scratchpad/thought-bank-YYYY-MM.md` — current month's thought bank
-- `content/inbox/YYYY-MM-DD.md` — today's inbox (approved items land here)
-- `content/inbox/_index.md` — master item registry
 - `content/pipeline/index.db` — SQLite index
+- `content/briefs/` — where new briefs are written
+- `content/inbox/YYYY-MM-DD.md` — today's inbox (items land here)
+- `content/inbox/_index.md` — master item registry
 
 ---
 
@@ -74,7 +74,7 @@ For each idea, surface:
 
 Develop everything that has merit. Sequencing when each piece gets posted happens at the queue stage, not here. A post and its companion article can both go out this week.
 
-**Related inventory:** Check `content/pipeline/series.md` and `content/.scratchpad/thought-bank-YYYY-MM.md` for existing thoughts on the same theme. Surface any connections.
+**Related inventory:** Check `content/pipeline/series.md` for series connections. Query `index.db` for existing items on the same theme. Surface any connections.
 
 **Spinoffs:** What questions does this idea raise that deserve their own piece?
 
@@ -159,14 +159,11 @@ For each approved item:
    {Specific guidance: tone, hooks to try, things to avoid, examples to reference}
 
    ## Sources
-   - Thought bank: content/.scratchpad/thought-bank-YYYY-MM.md
    {Any URLs or files referenced during the workshop}
+   - Captured directly via idea-dump
 
    ## Related Items
    - {ID} — {title or note, if any existing pipeline items connect}
-
-   ## Spinoffs
-   {Follow-up ideas to capture in the thought bank}
    ```
 
 3. **Register in index.db**:
@@ -186,9 +183,9 @@ For each approved item:
    **Ingest source:** idea-dump
    ```
 
-5. **Write spinoff ideas to thought bank** — any follow-up ideas that came up during the workshop go into `content/.scratchpad/thought-bank-YYYY-MM.md` with `Used: [ ]`.
+5. **Create spinoff briefs** — any follow-up ideas that came up during the workshop become their own briefs (using the same ID assignment + registration process). Link them to the parent item via the Related Items field. Set `status: raw` and `next-action` based on what the spinoff needs (draft, research, etc.).
 
-6. **Update `content/inbox/_index.md`** — add rows for each new item.
+6. **Update `content/inbox/_index.md`** — add rows for each new item (including spinoffs).
 
 ### Step 6: Offer next steps based on next-action
 

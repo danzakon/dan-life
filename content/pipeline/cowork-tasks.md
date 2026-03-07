@@ -121,14 +121,14 @@ Review the content pipeline health. Generate a Pipeline Health Report.
    queued, scheduled, posted. Calculate how many days of content remain assuming
    3 posts per day (the target cadence from content/pipeline/strategy.md).
 
-2. Thought bank: Read all content/.scratchpad/thought-bank-*.md files. Count
-   entries where "Used: [ ]" (unused thoughts). List the topic tags of unused
-   thoughts to show theme distribution.
+2. Raw items: Query index.db for items with status 'raw' — these are captured
+   thoughts and ingested items that haven't been digested or reviewed yet.
+   ```bash
+   sqlite3 content/pipeline/index.db \
+     "SELECT id, current_title, ingest_source FROM items WHERE status = 'raw' ORDER BY created_at DESC;"
+   ```
 
-3. Ideation files: Count files in content/.scratchpad/ (excluding thought-bank
-   files). Note any recent ones that might have content potential.
-
-4. Unconverted research: List files in research/curiosity-reports/ that have NOT
+3. Unconverted research: List files in research/reports/ that have NOT
    been referenced in content/pipeline/history.md or in any content/posts/ weekly
    files. These are research reports that haven't been turned into content yet.
 
@@ -149,9 +149,9 @@ Write the report in this format:
 - {n} posts posted this week
 - **Status:** {Healthy / Low / Urgent}
 
-### Thought Bank
-- {n} unused thoughts across {n} months
-- Top themes: {list}
+### Raw Items
+- {n} items at status 'raw' (uncaptured thoughts, undigested signals)
+- Top sources: {list}
 
 ### Unconverted Research
 - {n} reports not yet converted to content

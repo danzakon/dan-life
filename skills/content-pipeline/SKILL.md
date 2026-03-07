@@ -16,7 +16,7 @@ allowed-tools:
 
 Master orchestration skill. Reads system state, presents a guided session menu, and delegates to specialized skills. This is the starting point for any content work.
 
-Read `content/pipeline/SYSTEM.md` for the full architecture. Read `content/pipeline/README.md` for user-facing docs.
+Read `content/pipeline/README.md` for the full system architecture.
 
 ---
 
@@ -32,7 +32,7 @@ sqlite3 content/pipeline/index.db \
   "SELECT status, COUNT(*) FROM items GROUP BY status ORDER BY
    CASE status
      WHEN 'raw' THEN 1 WHEN 'inbox' THEN 2 WHEN 'approved' THEN 3
-     WHEN 'brief' THEN 4 WHEN 'draft' THEN 5 WHEN 'refined' THEN 6
+     WHEN 'draft' THEN 4 WHEN 'refined' THEN 5
      WHEN 'queued' THEN 7 WHEN 'published' THEN 8
    END;"
 
@@ -55,7 +55,6 @@ sqlite3 content/pipeline/index.db \
 
 Also check:
 - `content/pipeline/queue.md` — how many posts are queued with target dates
-- `content/.scratchpad/thought-bank-*.md` — count unused thoughts (entries with `Used: [ ]`)
 
 ### Step 2: Present status and session menu
 
@@ -68,7 +67,6 @@ Pipeline Status — 2026-03-07
   Approved: 2 briefs ready to draft
   Drafts:   3 awaiting refinement
   Queue:    5 posts (1.7 days at 3/day)
-  Thoughts: 4 unused in thought bank
 
 What do you want to do?
 
@@ -164,8 +162,7 @@ Generate a comprehensive pipeline health report:
 1. **Queue depth:** Posts queued, days of runway at cadence
 2. **Bottlenecks:** Items stuck at each stage (e.g., 5 drafts waiting for refine)
 3. **Pending next-actions:** Briefs with `next-action` other than `draft` that haven't been actioned yet (research, tutorial, series-seed still pending)
-4. **Thought bank:** Unused thought count, top themes
-5. **Unconverted research:** Reports in `research/reports/` not yet in the pipeline (check index.db for items with source_type='research')
+4. **Unconverted research:** Reports in `research/reports/` not yet in the pipeline (check index.db for items with source_type='research')
 6. **Content mix:** Last 2 weeks of history.md vs. strategy.md theme distribution
 7. **Series status:** Active series from series.md, episodes delivered vs. planned
 8. **Recommendations:** 2–3 specific actions to take
@@ -183,7 +180,6 @@ Pipeline Health Report — 2026-03-07
 Queue:        5 posts / 1.7 days runway — LOW
 Bottleneck:   3 drafts stuck in "draft" (need /content-refine)
 Pending work: 1 brief needs research, 1 needs series planning
-Thoughts:     4 unused across 1 month
 Research:     2 reports unconverted to content
 Series:       "The Refinement Era" — 2/4 episodes delivered
 
@@ -208,7 +204,7 @@ These bypass the session menu for quick actions:
 | Command | Action |
 |---------|--------|
 | "pipeline status" / "check my pipeline" | Jump to health report |
-| "what should I post" | Query strategy + thought bank + inbox, suggest 3-5 ideas |
+| "what should I post" | Query strategy + raw briefs + inbox, suggest 3-5 ideas |
 | "queue this" / "queue these" | Run queue action on specified or all refined posts |
 | "I want to create content" | Full session menu |
 
@@ -218,7 +214,7 @@ These bypass the session menu for quick actions:
 
 All state lives in the life repo:
 
-- `content/pipeline/SYSTEM.md` — full architecture and build checklist
+- `content/pipeline/README.md` — full system architecture
 - `content/pipeline/strategy.md` — content themes, voice, cadence
 - `content/pipeline/sources.md` — X accounts + YouTube channels
 - `content/pipeline/series.md` — content series tracker
@@ -230,7 +226,6 @@ All state lives in the life repo:
 - `content/briefs/` — approved work items
 - `content/posts/` — weekly post files (`YYYY-W{NN}.md`)
 - `content/articles/` — long-form drafts and published
-- `content/.scratchpad/thought-bank-YYYY-MM.md` — monthly thoughts
 - `research/reports/` — research output
 - `tutorials/guides/` — technical guides
 

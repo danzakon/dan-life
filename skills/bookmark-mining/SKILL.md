@@ -190,7 +190,7 @@ When banking a thought, creating a post, or writing any content derived from a b
 > {Full original tweet text}
 ```
 
-This block must be preserved through the entire pipeline — from thought bank to queue to published post. It's the provenance chain.
+This block must be preserved through the entire pipeline — from brief to queue to published post. It's the provenance chain.
 
 ### Remix Rules
 
@@ -212,20 +212,6 @@ Depending on the format, attribute differently:
 | **Thread** | Reference the source tweet in the first post or as a reply in the thread. |
 | **Article** | Link to the original tweet inline where you reference the idea. No need for formal citation — a natural "as @{username} pointed out" with a link is fine. |
 | **Fully remixed (no direct reference)** | If your content has diverged far enough that the original is just a starting spark, no attribution needed. Use your judgment — if someone reading both would say "that's the same take," attribute. |
-
-### Thought Bank Format
-
-When saving a bookmark-sourced idea via `capture-thought`, use this format:
-
-```markdown
-- **{time}** | #{topic} | {content_type}
-  {Your idea / angle / take}
-  > **Source:** [@{username}](https://x.com/{username}/status/{tweet_id})
-  > {Original tweet text}
-  - Used: [ ]
-```
-
-This ensures the source travels with the idea through the entire pipeline.
 
 ---
 

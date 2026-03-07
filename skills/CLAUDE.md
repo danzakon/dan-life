@@ -132,7 +132,7 @@ All ingest skills follow the same output contract: assign ID → write raw file 
 | `write-post` | Brief file | Twitter + LinkedIn variants, alt hooks |
 | `write-article` | Brief file | Long-form draft in `content/articles/drafts/` |
 | `article-image` | Article file | 1200×628px header image in `content/images/` |
-| `capture-thought` | Raw thought | Entry in `content/.scratchpad/thought-bank-YYYY-MM.md` |
+| `capture-thought` | Raw thought | Brief in `content/briefs/` + registered in `index.db` |
 
 ### Publishing
 
@@ -163,7 +163,8 @@ Every pipeline item gets a stable ID: `YYYYMMDD-{PREFIX}-NNN`
 | `YM` | youtube-monitor | YouTube videos (channel monitoring) |
 | `WL` | watch-later-mining | YouTube Watch Later videos |
 | `SR` | save-raw | Manually ingested URLs / pasted content |
-| `ID` | idea-dump | Raw thoughts → structured ideas |
+| `CT` | capture-thought | Quick thought capture → brief |
+| `ID` | idea-dump | Raw thoughts → workshopped briefs |
 | `RS` | research | Research reports |
 | `TU` | tutorial | Technical guides |
 
@@ -207,7 +208,7 @@ content/
 ├── briefs/           ← Post-interview work items (YYYYMMDD-SRC-NNN.md)
 ├── posts/            ← Weekly post drafts (YYYY-W{NN}.md)
 ├── articles/         ← Long-form (drafts/ + published/)
-└── .scratchpad/      ← Thought banks + ideation files
+└── briefs/           ← Work items (the atomic unit of the pipeline)
 
 research/reports/     ← Research output
 tutorials/guides/     ← Technical guide output

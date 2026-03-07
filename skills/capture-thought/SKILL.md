@@ -1,105 +1,145 @@
 ---
 name: capture-thought
-description: Quickly capture a thought, take, or idea into the content thought bank.
+description: Quickly capture a thought, take, or idea as a pipeline brief.
   Use when asked to "add a thought", "capture this", "I'm thinking about", or "thought:".
 argument-hint: "[thought text]"
 ---
 
 # Capture Thought
 
-Fast-path skill for capturing raw thoughts into the content pipeline. No analysis, no suggestions. Just capture and confirm.
+Fast-path skill for capturing raw thoughts into the content pipeline. No analysis, no conversation, no workshopping. Just create a brief, register the item, and confirm.
 
-## Workspace
-
-The thought bank lives in the user's life repo: `content/.scratchpad/`
-
-## File Routing
-
-Thoughts go into **monthly files**:
-
-```
-content/.scratchpad/thought-bank-YYYY-MM.md
-```
-
-Use the current month. If the file doesn't exist, create it with this header:
-
-```markdown
-# Thought Bank -- {Month Name} {Year}
-
-## Hot Topics
-
-Topics actively on my mind this month:
-
--
+Every thought becomes a brief — the atomic unit of the pipeline. The brief starts minimal (just the core insight) and gets developed later during the interview stage.
 
 ---
 
-## Thoughts
+## Process
+
+### 1. Assign an ID
+
+Query `index.db` for the highest CT number today:
+
+```bash
+sqlite3 content/pipeline/index.db \
+  "SELECT id FROM items WHERE id LIKE '$(date +%Y%m%d)-CT-%' ORDER BY id DESC LIMIT 1;"
 ```
 
-## Capture Format
+Increment by 1 (start at 001 if no results).
 
-Append each thought as:
+### 2. Write the brief
+
+Create `content/briefs/{ID}.md`:
 
 ```markdown
+---
+id: {ID}
+created: {YYYY-MM-DD}
+source-type: thought
+ingest-source: capture-thought
+status: raw
+format: {post | thread | article}
+platform: Both
+series-id:
+generate: single
+next-action: draft
+---
 
-### YYYY-MM-DD | {Topic Tag}
-
+## Core Insight
 {The raw thought exactly as provided}
 
-**Potential:** {post | thread | article}
-**Used:** [ ]
+## Sources
+- Captured directly
+
+## Related Items
 ```
+
+### 3. Register in index.db
+
+```bash
+sqlite3 content/pipeline/index.db \
+  "INSERT INTO items (id, created_at, source_type, ingest_source, status, current_title, format, platform)
+   VALUES ('{ID}', '$(date -u +%Y-%m-%dT%H:%M:%SZ)', 'thought', 'capture-thought', 'raw', '{short title}', '{format}', 'Both');"
+```
+
+### 4. Write inbox entry
+
+Add to today's inbox file (`content/inbox/YYYY-MM-DD.md`), creating the file if needed:
+
+```markdown
+## [{ID}] {Short title}
+
+**Status:** unreviewed
+**Type:** thought
+**Brief:** content/briefs/{ID}.md
+
+### Summary
+{One-sentence summary of the thought}
+
+### Actions
+- [ ] Review in content-interview
+```
+
+### 5. Update inbox index
+
+Add a row to `content/inbox/_index.md`.
+
+### 6. Confirm
+
+One-line response: `Captured: {short title} → {ID}`
+
+---
 
 ## Rules
 
-1. **Be fast.** Don't rewrite, analyze, or expand the thought. Capture it verbatim.
-2. **Infer the topic tag** from the content (e.g., "AI Engineering", "Tech Leadership", "Tenex", "Hot Take"). Keep tags short and consistent.
-3. **Infer content potential** based on length and complexity:
-   - Short opinion or observation -> `post`
-   - Multi-part idea that needs unpacking -> `thread`
-   - Deep topic that needs research or long-form treatment -> `article`
-4. **Confirm** with a one-line response: "Captured: {topic tag} thought in {month} bank."
-5. If the user provides multiple thoughts at once, capture each as a separate entry.
-6. Never modify existing entries in the file.
+1. **Be fast.** Don't rewrite, analyze, or expand the thought. Capture it verbatim as the Core Insight.
+2. **Infer a short title** from the content (e.g., "AI agents should be narrow and deep"). Keep it under 60 chars.
+3. **Infer format** based on length and complexity:
+   - Short opinion or observation → `post`
+   - Multi-part idea that needs unpacking → `thread`
+   - Deep topic that needs research or long-form treatment → `article`
+4. If the user provides multiple thoughts at once, capture each as a separate brief.
+5. Never modify existing briefs.
+
+---
 
 ## Series Connection Check
 
 After capturing, do a quick (non-blocking) check:
 
 1. Read `content/pipeline/series.md` — does this thought's topic connect to any active series?
-2. Scan the current month's thought bank — are there 2+ unused thoughts on the same topic tag?
+2. Query `index.db` for recent items with similar topics:
+   ```bash
+   sqlite3 content/pipeline/index.db \
+     "SELECT id, current_title FROM items WHERE source_type = 'thought' AND status IN ('raw','inbox') ORDER BY created_at DESC LIMIT 10;"
+   ```
 
-If a connection is found, add a brief note after the confirmation:
-
-```
-Captured: AI Engineering thought in March bank.
-(Connects to "The Refinement Era" series — 3 related thoughts now. Consider /idea-dump to develop.)
-```
-
-If 3+ related unused thoughts are found, suggest promoting to a series:
+If a series connection is found, add a brief note after the confirmation:
 
 ```
-Captured: AI Engineering thought in March bank.
-You now have 3 unused thoughts on agentic coding. Worth starting a series? Run /idea-dump to workshop them.
+Captured: AI agents should be narrow → 20260307-CT-001
+(Connects to "The Refinement Era" series)
+```
+
+If 3+ related raw thoughts exist, suggest workshopping them:
+
+```
+Captured: AI agents should be narrow → 20260307-CT-003
+You have 3 raw thoughts on agentic coding. Worth workshopping? Run /idea-dump to develop them together.
 ```
 
 Keep this lightweight — one extra line maximum. The capture path must stay fast.
+
+---
 
 ## Examples
 
 User: "Add a thought: Most AI agents fail because they try to do too much. The best ones are narrow and deep."
 
-Action: Append to `thought-bank-2026-03.md`:
+Action:
+1. Assign ID: `20260307-CT-001`
+2. Write brief to `content/briefs/20260307-CT-001.md`
+3. Register in `index.db` with `status: raw`, title: "AI agents should be narrow and deep"
+4. Write inbox entry to `content/inbox/2026-03-07.md`
+5. Update `content/inbox/_index.md`
 
-```markdown
-
-### 2026-03-07 | AI Engineering
-
-Most AI agents fail because they try to do too much. The best ones are narrow and deep.
-
-**Potential:** post
-**Used:** [ ]
-```
-
-Response: "Captured: AI Engineering thought in March bank."
+Response: `Captured: AI agents should be narrow and deep → 20260307-CT-001`

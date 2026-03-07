@@ -14,7 +14,7 @@ Each entry follows this structure:
 **Target date:** YYYY-MM-DD
 **Platform:** Twitter | LinkedIn | Both
 **Priority:** high | normal | low
-**Source:** thought-bank / research / bookmark / original
+**Source:** {brief ID or source description}
 
 **Twitter:**
 {Twitter-length content}

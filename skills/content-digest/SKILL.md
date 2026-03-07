@@ -17,8 +17,7 @@ Processes new inbox items after ingest. Scores each item against the content str
 - `content/inbox/YYYY-MM-DD.md` — inbox files to process
 - `content/pipeline/strategy.md` — hot topics, themes, cadence for scoring
 - `content/pipeline/series.md` — active series for connection detection
-- `content/.scratchpad/thought-bank-*.md` — existing thoughts to cross-reference
-- `content/pipeline/index.db` — update status raw → inbox
+- `content/pipeline/index.db` — existing items to cross-reference, update status raw → inbox
 
 ---
 
@@ -61,7 +60,7 @@ For each item in the inbox file with status `unreviewed`:
 
 **Series connection:** Does this connect to any active series in `series.md`? Name the series if so.
 
-**Cross-reference:** Search `content/.scratchpad/thought-bank-*.md` for existing thoughts on the same theme. List any matches.
+**Cross-reference:** Query `index.db` for existing items on the same theme. List any matches.
 
 ### Step 4: Refine content angles
 

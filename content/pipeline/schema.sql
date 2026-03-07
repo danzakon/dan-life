@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS items (
   source_type     TEXT,               -- x-post | x-article | youtube | web | research | thought | tutorial
   ingest_source   TEXT,               -- bookmark-mining | x-account-monitor | reply-monitor | youtube-monitor | save-raw | idea-dump | research | tutorial
   status          TEXT NOT NULL DEFAULT 'raw',
-                                      -- raw → inbox → approved → brief → draft → refined → queued → published
+                                      -- raw → inbox → approved → draft → refined → queued → published
   current_title   TEXT,               -- mutable; reflects latest working title
   original_url    TEXT,               -- link to the source content
   raw_file        TEXT,               -- relative path from repo root to raw content file
