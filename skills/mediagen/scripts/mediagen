@@ -1,0 +1,914 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#   "openai>=1.0",
+#   "google-genai>=1.0",
+#   "requests>=2.28",
+#   "rich>=13.0",
+# ]
+# ///
+"""mediagen - Generate AI images and videos from the command line.
+
+A self-contained CLI tool supporting multiple AI providers with graceful
+degradation when API keys are absent. Designed as the media-generation
+equivalent of xquery/ytquery.
+
+Config: ~/.config/mediagen/.env
+    OPENAI_API_KEY=...           # GPT-Image + Sora 2
+    GEMINI_API_KEY=...           # Imagen 4 + Veo 3.1
+    KLING_API_KEY=...            # Kling 3.0 via piapi.ai
+    SEEDANCE_API_KEY=...         # SeedDance 2.0
+    RUNWAY_API_KEY=...           # Runway Gen-4.5
+    MINIMAX_API_KEY=...          # MiniMax Hailuo 2.3
+    DEFAULT_IMAGE_PROVIDER=openai
+    DEFAULT_IMAGE_MODEL=gpt-image-1.5
+    DEFAULT_VIDEO_PROVIDER=google
+    DEFAULT_VIDEO_MODEL=veo-3.1-generate-001
+"""
+
+import argparse
+import base64
+import json
+import os
+import sys
+import time
+import urllib.request
+import urllib.error
+from pathlib import Path
+
+
+# =============================================================================
+# Provider / model registry
+# =============================================================================
+
+IMAGE_PROVIDERS = {
+    "openai": {
+        "key_var": "OPENAI_API_KEY",
+        "models": ["gpt-image-1.5", "gpt-image-1", "gpt-image-1-mini", "dall-e-3"],
+        "default_model": "gpt-image-1.5",
+        "description": "GPT-Image (highest quality)",
+    },
+    "google": {
+        "key_var": "GEMINI_API_KEY",
+        "models": [
+            "imagen-4.0-generate-001",
+            "imagen-4.0-ultra-generate-001",
+            "imagen-4.0-fast-generate-001",
+            "gemini-2.0-flash-exp",
+        ],
+        "default_model": "imagen-4.0-generate-001",
+        "description": "Imagen 4 / Gemini 2.0 Flash",
+    },
+}
+
+VIDEO_PROVIDERS = {
+    "openai": {
+        "key_var": "OPENAI_API_KEY",
+        "models": ["sora-2", "sora-2-pro"],
+        "default_model": "sora-2",
+        "description": "Sora 2 (best quality)",
+    },
+    "google": {
+        "key_var": "GEMINI_API_KEY",
+        "models": ["veo-3.1-generate-001", "veo-3.1-generate-preview"],
+        "default_model": "veo-3.1-generate-001",
+        "description": "Veo 3.1 (native audio)",
+    },
+    "kling": {
+        "key_var": "KLING_API_KEY",
+        "models": ["kling-3.0", "kling-2.6"],
+        "default_model": "kling-3.0",
+        "description": "Kling 3.0 via piapi.ai (cinematic motion)",
+    },
+    "seedance": {
+        "key_var": "SEEDANCE_API_KEY",
+        "models": ["seedance-2.0"],
+        "default_model": "seedance-2.0",
+        "description": "SeedDance 2.0 (up to 15s, quad-modal)",
+    },
+    "runway": {
+        "key_var": "RUNWAY_API_KEY",
+        "models": ["gen-4.5", "gen-4", "gen-3-alpha"],
+        "default_model": "gen-4.5",
+        "description": "Runway Gen-4.5",
+    },
+    "minimax": {
+        "key_var": "MINIMAX_API_KEY",
+        "models": ["hailuo-2.3", "hailuo-02"],
+        "default_model": "hailuo-2.3",
+        "description": "MiniMax Hailuo 2.3",
+    },
+}
+
+CONFIG_DIR = Path.home() / ".config" / "mediagen"
+CONFIG_FILE = CONFIG_DIR / ".env"
+
+
+# =============================================================================
+# Config
+# =============================================================================
+
+def load_config() -> dict:
+    """Load config from ~/.config/mediagen/.env with environment overrides."""
+    config = {}
+
+    if CONFIG_FILE.exists():
+        with open(CONFIG_FILE) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    key, _, value = line.partition("=")
+                    key, value = key.strip(), value.strip()
+                    if value and value[0] in ("'", '"') and value[-1] == value[0]:
+                        value = value[1:-1]
+                    if key and value:
+                        config[key] = value
+
+    for var in [
+        "OPENAI_API_KEY", "GEMINI_API_KEY", "KLING_API_KEY",
+        "SEEDANCE_API_KEY", "RUNWAY_API_KEY", "MINIMAX_API_KEY",
+        "DEFAULT_IMAGE_PROVIDER", "DEFAULT_IMAGE_MODEL",
+        "DEFAULT_VIDEO_PROVIDER", "DEFAULT_VIDEO_MODEL",
+    ]:
+        if val := os.environ.get(var):
+            config[var] = val
+
+    return config
+
+
+def detect_providers(config: dict) -> set:
+    """Return the set of provider names that have API keys configured."""
+    available = set()
+    all_providers = {**IMAGE_PROVIDERS, **VIDEO_PROVIDERS}
+    for name, info in all_providers.items():
+        if config.get(info["key_var"]):
+            available.add(name)
+    return available
+
+
+def resolve_provider_model(
+    config: dict,
+    available: set,
+    explicit_provider: str | None,
+    explicit_model: str | None,
+    mode: str,  # "image" or "video"
+) -> tuple[str, str]:
+    """Resolve provider + model with config defaults and availability checks."""
+    registry = IMAGE_PROVIDERS if mode == "image" else VIDEO_PROVIDERS
+    default_provider_key = f"DEFAULT_{mode.upper()}_PROVIDER"
+    default_model_key = f"DEFAULT_{mode.upper()}_MODEL"
+
+    provider = explicit_provider or config.get(default_provider_key)
+    if not provider:
+        # Auto-select first available provider for this mode.
+        for name in registry:
+            if name in available:
+                provider = name
+                break
+
+    if not provider:
+        sys.stderr.write(f"Error: No {mode} provider available.\n")
+        sys.stderr.write(f"Add an API key to {CONFIG_FILE}:\n")
+        for name, info in registry.items():
+            sys.stderr.write(f"  {info['key_var']}=your-api-key\n")
+        sys.exit(1)
+
+    if provider not in registry:
+        sys.stderr.write(f"Error: Unknown {mode} provider '{provider}'.\n")
+        sys.stderr.write(f"Available: {', '.join(registry.keys())}\n")
+        sys.exit(1)
+
+    if provider not in available:
+        info = registry[provider]
+        sys.stderr.write(f"Error: Provider '{provider}' has no API key configured.\n")
+        sys.stderr.write(f"Add to {CONFIG_FILE}:\n  {info['key_var']}=your-api-key\n")
+        sys.exit(1)
+
+    model = explicit_model or config.get(default_model_key) or registry[provider]["default_model"]
+    return provider, model
+
+
+# =============================================================================
+# Shared helpers
+# =============================================================================
+
+def size_to_aspect_ratio(size: str) -> str:
+    """Convert a WxH size string to the nearest standard aspect ratio for Imagen."""
+    try:
+        w, h = map(int, size.lower().split("x"))
+        ratio = w / h
+        candidates = {"1:1": 1.0, "16:9": 16 / 9, "9:16": 9 / 16, "4:3": 4 / 3, "3:4": 3 / 4}
+        return min(candidates, key=lambda r: abs(candidates[r] - ratio))
+    except (ValueError, ZeroDivisionError):
+        return "16:9"
+
+
+def save_bytes(data: bytes, output: str):
+    Path(output).parent.mkdir(parents=True, exist_ok=True)
+    Path(output).write_bytes(data)
+
+
+def download_file(url: str, output: str, timeout: int = 120):
+    Path(output).parent.mkdir(parents=True, exist_ok=True)
+    req = urllib.request.Request(url, headers={"User-Agent": "mediagen/1.0"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        Path(output).write_bytes(resp.read())
+
+
+def die(msg: str):
+    sys.stderr.write(f"Error: {msg}\n")
+    sys.exit(1)
+
+
+# =============================================================================
+# Image generation — OpenAI
+# =============================================================================
+
+def gen_image_openai(prompt: str, output: str, model: str, size: str, quality: str, config: dict) -> dict:
+    from openai import OpenAI
+
+    client = OpenAI(api_key=config["OPENAI_API_KEY"])
+    kwargs: dict = {"model": model, "prompt": prompt, "n": 1, "size": size}
+
+    if model == "dall-e-3":
+        kwargs["quality"] = "hd" if quality in ("high", "hd") else "standard"
+        kwargs["response_format"] = "b64_json"
+    else:
+        kwargs["quality"] = quality if quality in ("low", "medium", "high") else "high"
+        kwargs["response_format"] = "b64_json"
+
+    response = client.images.generate(**kwargs)
+    save_bytes(base64.b64decode(response.data[0].b64_json), output)
+
+    return {"path": str(Path(output).resolve()), "provider": "openai", "model": model, "size": size}
+
+
+def edit_image_openai(image_path: str, prompt: str, output: str, model: str, size: str, config: dict) -> dict:
+    from openai import OpenAI
+
+    # gpt-image-1-mini does not support edits; fall back to the full model.
+    if model in ("gpt-image-1-mini", "dall-e-3"):
+        model = "gpt-image-1"
+
+    client = OpenAI(api_key=config["OPENAI_API_KEY"])
+    with open(image_path, "rb") as img:
+        response = client.images.edit(model=model, image=img, prompt=prompt, n=1, size=size)
+
+    save_bytes(base64.b64decode(response.data[0].b64_json), output)
+    return {"path": str(Path(output).resolve()), "provider": "openai", "model": model, "size": size}
+
+
+# =============================================================================
+# Image generation — Google
+# =============================================================================
+
+def gen_image_google(prompt: str, output: str, model: str, size: str, quality: str, config: dict) -> dict:
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=config["GEMINI_API_KEY"])
+    aspect_ratio = size_to_aspect_ratio(size)
+
+    if model == "gemini-2.0-flash-exp":
+        response = client.models.generate_content(
+            model=model,
+            contents=prompt,
+            config=types.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"]),
+        )
+        image_bytes = None
+        for part in response.candidates[0].content.parts:
+            if hasattr(part, "inline_data") and part.inline_data:
+                image_bytes = part.inline_data.data
+                break
+        if not image_bytes:
+            die("Gemini returned no image data.")
+    else:
+        response = client.models.generate_images(
+            model=model,
+            prompt=prompt,
+            config=types.GenerateImagesConfig(
+                number_of_images=1,
+                aspect_ratio=aspect_ratio,
+                safety_filter_level="BLOCK_SOME",
+                person_generation="dont_allow",
+            ),
+        )
+        if not response.generated_images:
+            die("Imagen returned no images.")
+        image_bytes = response.generated_images[0].image.image_bytes
+
+    save_bytes(image_bytes, output)
+    return {
+        "path": str(Path(output).resolve()),
+        "provider": "google",
+        "model": model,
+        "size": size,
+        "aspect_ratio": aspect_ratio,
+    }
+
+
+def edit_image_google(image_path: str, prompt: str, output: str, config: dict) -> dict:
+    """Edit an image using Gemini 2.0 Flash multimodal input → image output."""
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=config["GEMINI_API_KEY"])
+    model = "gemini-2.0-flash-exp"
+    img_bytes = Path(image_path).read_bytes()
+    mime_type = "image/png" if image_path.lower().endswith(".png") else "image/jpeg"
+
+    response = client.models.generate_content(
+        model=model,
+        contents=[
+            types.Part.from_bytes(data=img_bytes, mime_type=mime_type),
+            prompt,
+        ],
+        config=types.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"]),
+    )
+
+    image_bytes = None
+    for part in response.candidates[0].content.parts:
+        if hasattr(part, "inline_data") and part.inline_data:
+            image_bytes = part.inline_data.data
+            break
+
+    if not image_bytes:
+        die("Gemini returned no image data.")
+
+    save_bytes(image_bytes, output)
+    return {"path": str(Path(output).resolve()), "provider": "google", "model": model}
+
+
+# =============================================================================
+# Video — submit functions (all async; return task_id immediately)
+# =============================================================================
+
+def submit_video_openai(prompt: str, model: str, duration: int, aspect_ratio: str, config: dict) -> dict:
+    import requests
+
+    headers = {"Authorization": f"Bearer {config['OPENAI_API_KEY']}", "Content-Type": "application/json"}
+    resp = requests.post(
+        "https://api.openai.com/v1/video/generations",
+        headers=headers,
+        json={"model": model, "prompt": prompt, "duration": duration, "n": 1, "resolution": "720p"},
+        timeout=30,
+    )
+    if not resp.ok:
+        die(f"OpenAI API error {resp.status_code}: {resp.text[:500]}")
+    data = resp.json()
+    return {"task_id": data.get("id", data.get("task_id", "")), "provider": "openai", "model": model, "status": "submitted"}
+
+
+def submit_video_google(prompt: str, model: str, duration: int, aspect_ratio: str, config: dict) -> dict:
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=config["GEMINI_API_KEY"])
+    operation = client.models.generate_video(
+        model=model,
+        prompt=prompt,
+        config=types.GenerateVideoConfig(
+            aspect_ratio=aspect_ratio,
+            duration_seconds=duration,
+            person_generation="dont_allow",
+        ),
+    )
+    return {"task_id": operation.name, "provider": "google", "model": model, "status": "submitted"}
+
+
+def submit_video_kling(prompt: str, model: str, duration: int, aspect_ratio: str, config: dict) -> dict:
+    import requests
+
+    model_map = {"kling-3.0": "kling-video-v3.0-pro-text", "kling-2.6": "kling-video-v2.6-pro-text"}
+    headers = {"X-API-Key": config["KLING_API_KEY"], "Content-Type": "application/json"}
+    resp = requests.post(
+        "https://api.piapi.ai/api/kling/v1/video",
+        headers=headers,
+        json={
+            "model": model_map.get(model, "kling-video-v3.0-pro-text"),
+            "prompt": prompt,
+            "duration": str(duration),
+            "aspect_ratio": aspect_ratio,
+        },
+        timeout=30,
+    )
+    if not resp.ok:
+        die(f"Kling API error {resp.status_code}: {resp.text[:500]}")
+    data = resp.json()
+    return {"task_id": data.get("task_id", data.get("id", "")), "provider": "kling", "model": model, "status": "submitted"}
+
+
+def submit_video_seedance(prompt: str, model: str, duration: int, aspect_ratio: str, config: dict) -> dict:
+    import requests
+
+    headers = {"Authorization": f"Bearer {config['SEEDANCE_API_KEY']}", "Content-Type": "application/json"}
+    resp = requests.post(
+        "https://api.seedance.best/v2/generate/text",
+        headers=headers,
+        json={"prompt": prompt, "duration": duration, "resolution": "720p", "aspect_ratio": aspect_ratio},
+        timeout=30,
+    )
+    if not resp.ok:
+        die(f"SeedDance API error {resp.status_code}: {resp.text[:500]}")
+    data = resp.json()
+    return {"task_id": data.get("task_id", data.get("id", "")), "provider": "seedance", "model": model, "status": "submitted"}
+
+
+def submit_video_runway(prompt: str, model: str, duration: int, aspect_ratio: str, config: dict) -> dict:
+    import requests
+
+    model_map = {"gen-4.5": "gen4_turbo", "gen-4": "gen4", "gen-3-alpha": "gen3a_turbo"}
+    headers = {
+        "Authorization": f"Bearer {config['RUNWAY_API_KEY']}",
+        "Content-Type": "application/json",
+        "X-Runway-Version": "2024-11-06",
+    }
+    resp = requests.post(
+        "https://api.runwayml.com/v1/text_to_video",
+        headers=headers,
+        json={"model": model_map.get(model, "gen4_turbo"), "promptText": prompt, "duration": duration, "ratio": aspect_ratio},
+        timeout=30,
+    )
+    if not resp.ok:
+        die(f"Runway API error {resp.status_code}: {resp.text[:500]}")
+    data = resp.json()
+    return {"task_id": data.get("id", ""), "provider": "runway", "model": model, "status": "submitted"}
+
+
+def submit_video_minimax(prompt: str, model: str, duration: int, aspect_ratio: str, config: dict) -> dict:
+    import requests
+
+    model_map = {"hailuo-2.3": "MiniMax-Hailuo-2.3", "hailuo-02": "MiniMax-Hailuo-02"}
+    headers = {"Authorization": f"Bearer {config['MINIMAX_API_KEY']}", "Content-Type": "application/json"}
+    resp = requests.post(
+        "https://platform.minimax.io/v1/video_generation",
+        headers=headers,
+        json={"model": model_map.get(model, "MiniMax-Hailuo-2.3"), "prompt": prompt, "duration": duration},
+        timeout=30,
+    )
+    if not resp.ok:
+        die(f"MiniMax API error {resp.status_code}: {resp.text[:500]}")
+    data = resp.json()
+    return {"task_id": data.get("task_id", data.get("id", "")), "provider": "minimax", "model": model, "status": "submitted"}
+
+
+# =============================================================================
+# Video — poll functions (block until done, then download)
+# =============================================================================
+
+def poll_video_openai(task_id: str, output: str, config: dict, timeout: int = 600) -> dict:
+    import requests
+
+    headers = {"Authorization": f"Bearer {config['OPENAI_API_KEY']}"}
+    deadline = time.time() + timeout
+
+    while time.time() < deadline:
+        resp = requests.get(
+            f"https://api.openai.com/v1/video/generations/{task_id}",
+            headers=headers, timeout=30,
+        )
+        if not resp.ok:
+            die(f"OpenAI poll error {resp.status_code}: {resp.text[:500]}")
+        data = resp.json()
+        status = data.get("status", "")
+
+        if status == "completed":
+            url = (data.get("data") or [{}])[0].get("url")
+            if not url:
+                die("No video URL in completed OpenAI response.")
+            download_file(url, output)
+            return {"path": str(Path(output).resolve()), "provider": "openai", "task_id": task_id, "size_bytes": Path(output).stat().st_size}
+        elif status in ("failed", "cancelled"):
+            die(f"Video generation {status}: {data.get('error', '')}")
+
+        sys.stderr.write(f"  Status: {status}...\n")
+        time.sleep(5)
+
+    die(f"Timed out after {timeout}s")
+
+
+def poll_video_google(task_id: str, output: str, config: dict, timeout: int = 600) -> dict:
+    from google import genai
+
+    client = genai.Client(api_key=config["GEMINI_API_KEY"])
+    deadline = time.time() + timeout
+
+    while time.time() < deadline:
+        op = client.operations.get(name=task_id)
+
+        if getattr(op, "done", False):
+            if getattr(op, "error", None):
+                die(f"Veo generation failed: {op.error.message}")
+
+            result = getattr(op, "result", None)
+            videos = getattr(result, "generated_videos", []) if result else []
+            if not videos:
+                die("Veo returned no generated videos.")
+
+            video = videos[0].video
+            # Prefer URI download; fall back to SDK download method.
+            if hasattr(video, "uri") and video.uri:
+                download_file(video.uri, output)
+            else:
+                video_bytes = client.files.download(file=video)
+                save_bytes(video_bytes, output)
+
+            return {
+                "path": str(Path(output).resolve()),
+                "provider": "google",
+                "task_id": task_id,
+                "size_bytes": Path(output).stat().st_size,
+            }
+
+        sys.stderr.write("  Waiting for Veo...\n")
+        time.sleep(10)
+
+    die(f"Timed out after {timeout}s")
+
+
+def poll_video_kling(task_id: str, output: str, config: dict, timeout: int = 600) -> dict:
+    import requests
+
+    headers = {"X-API-Key": config["KLING_API_KEY"]}
+    deadline = time.time() + timeout
+
+    while time.time() < deadline:
+        resp = requests.get(
+            f"https://api.piapi.ai/api/kling/v1/video/{task_id}",
+            headers=headers, timeout=30,
+        )
+        if not resp.ok:
+            die(f"Kling poll error {resp.status_code}: {resp.text[:500]}")
+        data = resp.json()
+        status = data.get("status", "")
+
+        if status == "completed":
+            videos = data.get("output", {}).get("videos", [])
+            if not videos:
+                die("No video URL in Kling response.")
+            download_file(videos[0]["url"], output)
+            return {"path": str(Path(output).resolve()), "provider": "kling", "task_id": task_id, "size_bytes": Path(output).stat().st_size}
+        elif status in ("failed", "error"):
+            die(f"Kling video generation failed: {data.get('error', '')}")
+
+        sys.stderr.write(f"  Status: {status}...\n")
+        time.sleep(5)
+
+    die(f"Timed out after {timeout}s")
+
+
+def poll_video_seedance(task_id: str, output: str, config: dict, timeout: int = 600) -> dict:
+    import requests
+
+    headers = {"Authorization": f"Bearer {config['SEEDANCE_API_KEY']}"}
+    deadline = time.time() + timeout
+
+    while time.time() < deadline:
+        resp = requests.get(
+            f"https://api.seedance.best/v2/tasks/{task_id}",
+            headers=headers, timeout=30,
+        )
+        if not resp.ok:
+            die(f"SeedDance poll error {resp.status_code}: {resp.text[:500]}")
+        data = resp.json()
+        status = data.get("status", "").lower()
+
+        if status in ("completed", "success"):
+            url = data.get("video_url") or data.get("url")
+            if not url:
+                die("No video URL in SeedDance response.")
+            download_file(url, output)
+            return {"path": str(Path(output).resolve()), "provider": "seedance", "task_id": task_id, "size_bytes": Path(output).stat().st_size}
+        elif status in ("failed", "error"):
+            die(f"SeedDance video generation failed: {data.get('error', '')}")
+
+        sys.stderr.write(f"  Status: {status}...\n")
+        time.sleep(5)
+
+    die(f"Timed out after {timeout}s")
+
+
+def poll_video_runway(task_id: str, output: str, config: dict, timeout: int = 600) -> dict:
+    import requests
+
+    headers = {"Authorization": f"Bearer {config['RUNWAY_API_KEY']}", "X-Runway-Version": "2024-11-06"}
+    deadline = time.time() + timeout
+
+    while time.time() < deadline:
+        resp = requests.get(
+            f"https://api.runwayml.com/v1/tasks/{task_id}",
+            headers=headers, timeout=30,
+        )
+        if not resp.ok:
+            die(f"Runway poll error {resp.status_code}: {resp.text[:500]}")
+        data = resp.json()
+        status = data.get("status", "")
+
+        if status == "SUCCEEDED":
+            outputs = data.get("output", [])
+            if not outputs:
+                die("No video URL in Runway response.")
+            download_file(outputs[0], output)
+            return {"path": str(Path(output).resolve()), "provider": "runway", "task_id": task_id, "size_bytes": Path(output).stat().st_size}
+        elif status in ("FAILED", "CANCELLED"):
+            die(f"Runway video {status.lower()}: {data.get('failure', '')}")
+
+        sys.stderr.write(f"  Status: {status}...\n")
+        time.sleep(5)
+
+    die(f"Timed out after {timeout}s")
+
+
+def poll_video_minimax(task_id: str, output: str, config: dict, timeout: int = 600) -> dict:
+    import requests
+
+    headers = {"Authorization": f"Bearer {config['MINIMAX_API_KEY']}"}
+    deadline = time.time() + timeout
+
+    while time.time() < deadline:
+        resp = requests.get(
+            "https://platform.minimax.io/v1/query/video_generation",
+            headers=headers, params={"task_id": task_id}, timeout=30,
+        )
+        if not resp.ok:
+            die(f"MiniMax poll error {resp.status_code}: {resp.text[:500]}")
+        data = resp.json()
+        status = data.get("status", "")
+
+        if status in ("Success", "Completed"):
+            url = data.get("download_url") or data.get("file_url")
+            if not url:
+                die("No download URL in MiniMax response.")
+            download_file(url, output)
+            return {"path": str(Path(output).resolve()), "provider": "minimax", "task_id": task_id, "size_bytes": Path(output).stat().st_size}
+        elif status in ("Fail", "Failed"):
+            die(f"MiniMax video generation failed: {data.get('error', '')}")
+
+        sys.stderr.write(f"  Status: {status}...\n")
+        time.sleep(5)
+
+    die(f"Timed out after {timeout}s")
+
+
+_VIDEO_SUBMIT = {
+    "openai": submit_video_openai,
+    "google": submit_video_google,
+    "kling": submit_video_kling,
+    "seedance": submit_video_seedance,
+    "runway": submit_video_runway,
+    "minimax": submit_video_minimax,
+}
+
+_VIDEO_POLL = {
+    "openai": poll_video_openai,
+    "google": poll_video_google,
+    "kling": poll_video_kling,
+    "seedance": poll_video_seedance,
+    "runway": poll_video_runway,
+    "minimax": poll_video_minimax,
+}
+
+
+# =============================================================================
+# Commands
+# =============================================================================
+
+def cmd_image_gen(args, config, available):
+    parts = args.command
+    if len(parts) < 2:
+        die('Usage: mediagen i:gen "prompt" -o output.png')
+    prompt = " ".join(parts[1:])
+    output = args.output or "output.png"
+    size = args.size or "1792x1024"
+
+    provider, model = resolve_provider_model(config, available, args.provider, args.model, "image")
+    sys.stderr.write(f"Generating image [{provider}/{model}]...\n")
+
+    if provider == "openai":
+        result = gen_image_openai(prompt, output, model, size, args.quality, config)
+    elif provider == "google":
+        result = gen_image_google(prompt, output, model, size, args.quality, config)
+    else:
+        die(f"Image generation not supported for provider '{provider}'.")
+
+    if args.json:
+        print(json.dumps(result))
+    else:
+        size_bytes = Path(output).stat().st_size
+        print(f"Saved: {result['path']}  [provider: {provider}, model: {model}, {size_bytes:,} bytes]")
+
+
+def cmd_image_edit(args, config, available):
+    parts = args.command
+    if len(parts) < 3:
+        die('Usage: mediagen i:edit image.png "edit instruction" -o output.png')
+    image_path, prompt = parts[1], " ".join(parts[2:])
+    output = args.output or "edited.png"
+
+    if not Path(image_path).exists():
+        die(f"Image file not found: {image_path}")
+
+    provider, model = resolve_provider_model(config, available, args.provider, args.model, "image")
+    sys.stderr.write(f"Editing image [{provider}/{model}]...\n")
+
+    if provider == "openai":
+        result = edit_image_openai(image_path, prompt, output, model, args.size or "1024x1024", config)
+    elif provider == "google":
+        result = edit_image_google(image_path, prompt, output, config)
+    else:
+        die(f"Image editing not supported for provider '{provider}'.")
+
+    if args.json:
+        print(json.dumps(result))
+    else:
+        size_bytes = Path(output).stat().st_size
+        print(f"Saved: {result['path']}  [provider: {provider}, model: {result['model']}, {size_bytes:,} bytes]")
+
+
+def cmd_video_gen(args, config, available):
+    parts = args.command
+    if len(parts) < 2:
+        die('Usage: mediagen v:gen "prompt" -o clip.mp4')
+    prompt = " ".join(parts[1:])
+    output = args.output or "output.mp4"
+
+    provider, model = resolve_provider_model(config, available, args.provider, args.model, "video")
+    sys.stderr.write(f"Submitting video job [{provider}/{model}]...\n")
+
+    task_info = _VIDEO_SUBMIT[provider](prompt, model, args.duration, args.aspect_ratio, config)
+
+    if args.no_wait:
+        if args.json:
+            print(json.dumps(task_info))
+        else:
+            print(f"Task submitted: {task_info['task_id']}  [provider: {provider}]")
+            print(f"Download when ready:")
+            print(f"  mediagen v:status {task_info['task_id']} -o {output} --provider {provider}")
+        return
+
+    sys.stderr.write(f"Waiting for video... (task: {task_info['task_id']})\n")
+    result = _VIDEO_POLL[provider](task_info["task_id"], output, config)
+    result["model"] = model
+
+    if args.json:
+        print(json.dumps(result))
+    else:
+        size_mb = result.get("size_bytes", 0) / 1_000_000
+        print(f"Saved: {result['path']}  [provider: {provider}, model: {model}, {size_mb:.1f} MB]")
+
+
+def cmd_video_status(args, config, available):
+    parts = args.command
+    if len(parts) < 2:
+        die("Usage: mediagen v:status TASK_ID -o clip.mp4 --provider PROVIDER")
+    task_id = parts[1]
+    output = args.output or "output.mp4"
+
+    provider, model = resolve_provider_model(config, available, args.provider, args.model, "video")
+    sys.stderr.write(f"Checking status [{provider}] task: {task_id}...\n")
+
+    result = _VIDEO_POLL[provider](task_id, output, config)
+    result["model"] = model
+
+    if args.json:
+        print(json.dumps(result))
+    else:
+        size_mb = result.get("size_bytes", 0) / 1_000_000
+        print(f"Saved: {result['path']}  [provider: {provider}, {size_mb:.1f} MB]")
+
+
+def cmd_providers(config, available):
+    from rich.console import Console
+    from rich.table import Table
+
+    console = Console()
+    table = Table(title="mediagen providers", show_lines=True)
+    table.add_column("Provider", style="bold")
+    table.add_column("Status")
+    table.add_column("Key var")
+    table.add_column("Image models")
+    table.add_column("Video models")
+
+    all_names = sorted(set(list(IMAGE_PROVIDERS.keys()) + list(VIDEO_PROVIDERS.keys())))
+    for name in all_names:
+        img_info = IMAGE_PROVIDERS.get(name)
+        vid_info = VIDEO_PROVIDERS.get(name)
+        key_var = (img_info or vid_info or {}).get("key_var", "")
+        is_avail = name in available
+        status = "[green]configured[/green]" if is_avail else "[dim]no key[/dim]"
+        img_models = "\n".join(img_info["models"]) if img_info else "[dim]—[/dim]"
+        vid_models = "\n".join(vid_info["models"]) if vid_info else "[dim]—[/dim]"
+        table.add_row(name, status, key_var, img_models, vid_models)
+
+    console.print(table)
+    console.print(f"\nConfig: [dim]{CONFIG_FILE}[/dim]")
+
+
+def cmd_models(config, available):
+    from rich.console import Console
+    from rich.table import Table
+
+    console = Console()
+
+    def make_table(title, registry):
+        t = Table(title=title, show_lines=True)
+        t.add_column("Provider")
+        t.add_column("Model")
+        t.add_column("Default")
+        t.add_column("Status")
+        for name, info in registry.items():
+            is_avail = name in available
+            status = "[green]ready[/green]" if is_avail else "[dim]no key[/dim]"
+            default = info["default_model"]
+            for i, model in enumerate(info["models"]):
+                t.add_row(
+                    name if i == 0 else "",
+                    model,
+                    "[cyan]default[/cyan]" if model == default else "",
+                    status if i == 0 else "",
+                )
+        return t
+
+    console.print(make_table("Image models", IMAGE_PROVIDERS))
+    console.print()
+    console.print(make_table("Video models", VIDEO_PROVIDERS))
+
+
+# =============================================================================
+# Main
+# =============================================================================
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Generate AI images and videos from the command line",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Commands:
+  mediagen i:gen "prompt" -o output.png            Generate an image
+  mediagen i:edit image.png "edit" -o out.png      Edit an existing image
+  mediagen v:gen "prompt" -o clip.mp4              Generate a video (blocks until done)
+  mediagen v:gen "prompt" -o clip.mp4 --no-wait    Submit job, print task ID and exit
+  mediagen v:status TASK_ID -o clip.mp4            Download a previously submitted video
+  mediagen providers                               Show all providers and their status
+  mediagen models                                  List all models per provider
+
+Flags:
+  --provider    openai | google | kling | seedance | runway | minimax
+  --model       Model name (overrides DEFAULT_*_MODEL from config)
+  --size        Image size (default: 1792x1024)
+  --quality     Image quality: low, medium, high (default: high)
+  --duration    Video duration in seconds (default: 8)
+  --aspect-ratio  Video aspect ratio (default: 16:9)
+  --no-wait     Submit video without polling
+  --json        Raw JSON output to stdout
+
+Config: ~/.config/mediagen/.env
+  OPENAI_API_KEY, GEMINI_API_KEY, KLING_API_KEY, SEEDANCE_API_KEY,
+  RUNWAY_API_KEY, MINIMAX_API_KEY
+  DEFAULT_IMAGE_PROVIDER=openai    DEFAULT_IMAGE_MODEL=gpt-image-1.5
+  DEFAULT_VIDEO_PROVIDER=google    DEFAULT_VIDEO_MODEL=veo-3.1-generate-001
+""",
+    )
+    parser.add_argument("command", nargs="*", help="Command and arguments")
+    parser.add_argument("--provider", help="Provider override")
+    parser.add_argument("--model", help="Model override")
+    parser.add_argument("--size", help="Image size, e.g. 1792x1024")
+    parser.add_argument("--quality", default="high", help="Image quality: low, medium, high")
+    parser.add_argument("--duration", type=int, default=8, help="Video duration in seconds")
+    parser.add_argument("--aspect-ratio", default="16:9", dest="aspect_ratio", help="Video aspect ratio")
+    parser.add_argument("--no-wait", action="store_true", help="Submit video job and exit without polling")
+    parser.add_argument("--json", action="store_true", help="Output raw JSON")
+    parser.add_argument("--output", "-o", help="Output file path")
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+
+    config = load_config()
+    available = detect_providers(config)
+    command = args.command[0].lower()
+
+    if command == "i:gen":
+        cmd_image_gen(args, config, available)
+    elif command == "i:edit":
+        cmd_image_edit(args, config, available)
+    elif command == "v:gen":
+        cmd_video_gen(args, config, available)
+    elif command == "v:status":
+        cmd_video_status(args, config, available)
+    elif command == "providers":
+        cmd_providers(config, available)
+    elif command == "models":
+        cmd_models(config, available)
+    else:
+        sys.stderr.write(f"Unknown command: {command}\n")
+        sys.stderr.write("Available: i:gen, i:edit, v:gen, v:status, providers, models\n")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

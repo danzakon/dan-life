@@ -32,17 +32,19 @@ Run after adding any new skill: `bash skills/sync.sh`
 
 **Skills** (`SKILL.md`) are agent instructions — they document a workflow that any agent executes. They have no code; they orchestrate via Bash tool calls.
 
-**CLI tools** (`scripts/`) are standalone Python executables that skills call via Bash. They have their own interfaces, config files, and auth. The two CLI tools are:
+**CLI tools** (`scripts/`) are standalone Python executables that skills call via Bash. They have their own interfaces, config files, and auth.
 
 | Tool | Location | What it does |
 |------|----------|-------------|
 | `xquery` | `xquery/scripts/xquery` | Query X/Twitter: search, users, tweets, bookmarks (OAuth). Also queries Grok (xAI). |
 | `ytquery` | `ytquery/scripts/ytquery` | Query YouTube: channels, videos, transcripts, thumbnails, screenshots, clips, Watch Later, search. |
+| `mediagen` | `mediagen/scripts/mediagen` | Generate AI images and videos: openai, google, kling, seedance, runway, minimax. |
 
-Both are symlinked to `~/.local/bin/` for PATH access:
+All three are symlinked to `~/.local/bin/` for PATH access:
 ```bash
-~/.local/bin/xquery  →  ~/.claude/skills/xquery/scripts/xquery
-~/.local/bin/ytquery →  life/skills/ytquery/scripts/ytquery
+~/.local/bin/xquery   →  ~/.claude/skills/xquery/scripts/xquery
+~/.local/bin/ytquery  →  life/skills/ytquery/scripts/ytquery
+~/.local/bin/mediagen →  life/skills/mediagen/scripts/mediagen
 ```
 
 ---
@@ -89,8 +91,41 @@ Config: `~/.config/ytquery/.env`
 
 Dependencies (install separately):
 ```bash
-pip install yt-dlp youtube-transcript-api
 brew install ffmpeg deno          # deno required by yt-dlp since Nov 2025
+# Python deps (yt-dlp, youtube-transcript-api) auto-installed via uv on first run
+```
+
+### mediagen
+
+```bash
+mediagen i:gen "prompt"                 # Generate image (default: openai/gpt-image-1.5)
+mediagen i:gen "prompt" -o path.png --size 1792x1024
+mediagen i:gen "prompt" --provider google --model imagen-4.0-fast-generate-001
+mediagen i:edit image.png "make it darker" -o out.png
+mediagen v:gen "prompt" -o clip.mp4 --duration 8
+mediagen v:gen "prompt" --no-wait       # Return task ID immediately
+mediagen v:status TASK_ID -o clip.mp4 --provider google
+mediagen providers                      # Show configured/available providers
+mediagen models                         # Show all models by provider
+mediagen --json i:gen "prompt" -o out.png  # JSON output
+```
+
+Config: `~/.config/mediagen/.env`
+- `OPENAI_API_KEY` — GPT-Image-1.5 (image) + Sora 2 (video)
+- `GEMINI_API_KEY` — Imagen 4 (image) + Veo 3.1 (video)
+- `KLING_API_KEY` — Kling 3.0/2.6 video (via piapi.ai)
+- `SEEDANCE_API_KEY` — SeedDance 2.0 video
+- `RUNWAY_API_KEY` — Runway Gen-4.5 video
+- `MINIMAX_API_KEY` — MiniMax Hailuo video
+- `DEFAULT_IMAGE_PROVIDER` / `DEFAULT_IMAGE_MODEL` — override image defaults
+- `DEFAULT_VIDEO_PROVIDER` / `DEFAULT_VIDEO_MODEL` — override video defaults
+
+Setup:
+```bash
+chmod +x skills/mediagen/scripts/mediagen
+bash skills/sync.sh
+ln -sf $(realpath skills/mediagen/scripts/mediagen) ~/.local/bin/mediagen
+# Python deps auto-installed via uv on first run
 ```
 
 ---
@@ -138,11 +173,12 @@ All ingest skills follow the same output contract: assign ID → write raw file 
 
 Called internally by the content-pipeline work session.
 
-| Skill | Input | Output |
-|-------|-------|--------|
-| `write-post` | Brief file | Twitter + LinkedIn variants, alt hooks |
-| `write-article` | Brief file | Long-form draft in `content/articles/drafts/` |
-| `article-image` | Article file | 1200x628px header image in `content/images/` |
+| Skill | Input | Output | User-invocable? |
+|-------|-------|--------|-----------------|
+| `write-post` | Brief file | Twitter + LinkedIn variants, alt hooks | No — called by pipeline |
+| `write-article` | Brief file | Long-form draft in `content/articles/drafts/` | No — called by pipeline |
+| `article-image` | Article file | 1200x628px header image in `content/images/` | No — called by pipeline |
+| `mediagen` | CLI: generate images + videos from prompts. Supports openai, google, kling, seedance, runway, minimax. | Image or video file | No — called by article-image and other skills |
 
 ### Research + Learning
 
@@ -165,6 +201,7 @@ These remain directly invocable AND accessible through content-pipeline's Add mo
 |-------|-------------|
 | `xquery` | Query Grok + X API directly (also a CLI tool, see above) |
 | `ytquery` | Query YouTube directly (also a CLI tool, see above) |
+| `mediagen` | Generate AI images and videos from the command line (also a CLI tool, see above) |
 
 ---
 

@@ -63,7 +63,7 @@ Consider:
 
 ### Step 3: Generate the Prompt
 
-Create a detailed prompt for Nano-Banana (or similar image generator) that includes:
+Create a detailed prompt for `mediagen` (or any image generator) that includes:
 
 1. **Subject**: The main visual element
 2. **Style**: Art style, mood, color palette
@@ -91,13 +91,17 @@ Avoid: [SPECIFIC THINGS TO EXCLUDE - e.g., text, human faces, hands, etc.]
 
 ### Step 4: Generate and Save
 
-Use Nano-Banana MCP tools to generate:
+Use `mediagen` to generate the image:
 
-```
-mcp__nano-banana__generate_image with the prompt
+```bash
+mediagen i:gen "{prompt}" \
+  -o content/images/{YYYY}-{MM}-{slug}-og.png \
+  --size 1792x1024
 ```
 
-Save to: `/Users/danzakon/dev/life/content/images/`
+If `mediagen` is not installed or returns an error, output the full prompt for
+manual generation in Gemini AI Studio, Midjourney, or DALL-E — and continue
+with the rest of the article workflow.
 
 ## House Visual Style
 
@@ -181,21 +185,18 @@ Technical requirements:
 Avoid: Literal depictions, busy backgrounds, gradients
 ```
 
-## MCP Tool Usage
+## CLI Tool Usage
 
-When Nano-Banana MCP is available, use these tools:
+All image generation goes through the `mediagen` CLI:
 
-| Tool | Purpose |
-|------|---------|
-| `generate_image` | Create new image from prompt |
-| `edit_image` | Modify existing image |
-| `iterate_image` | Refine last generated image |
+| Command | Purpose |
+|---------|---------|
+| `mediagen i:gen "prompt" -o path.png --size 1792x1024` | Create new image |
+| `mediagen i:edit existing.png "edit prompt" -o path.png` | Modify existing image |
+| `mediagen providers` | Check which providers are configured |
 
-If MCP is not available, output the prompt for manual use in:
-- Google Gemini (nano-banana backend)
-- Midjourney
-- DALL-E
-- Other image generators
+If `mediagen` is not installed or no API keys are available, output the prompt
+for manual use in Gemini AI Studio, Midjourney, or DALL-E.
 
 ## Output
 
@@ -212,7 +213,7 @@ Always provide all three artifacts:
 
 **Article:** content/articles/drafts/{filename}
 **Generated:** YYYY-MM-DD
-**Tool:** nano-banana (Gemini)
+**Tool:** mediagen [{provider}/{model}]
 **Theme accent:** {color name} ({hex})
 
 ## Prompt

@@ -1,13 +1,20 @@
-#!/Users/danzakon/.local/share/ytquery-venv/bin/python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#   "yt-dlp",
+#   "youtube-transcript-api",
+# ]
+# ///
 """ytquery - Query YouTube from the command line.
 
 A CLI tool for YouTube data: channel monitoring, video metadata, transcripts,
 thumbnails, screenshots, clips, and Watch Later access. Designed as the YouTube
 equivalent of xquery (for X/Twitter).
 
-Dependencies (must be installed separately):
-    pip install yt-dlp youtube-transcript-api
-    brew install ffmpeg deno
+Python dependencies are auto-installed on first run via uv.
+External binaries still require manual installation:
+    brew install ffmpeg deno    # deno required by yt-dlp since Nov 2025
 
 Config: ~/.config/ytquery/.env
     # Optional: cookie file for Watch Later / age-restricted content
