@@ -68,7 +68,8 @@ Other angles:
 Series: none detected
 
 What do you think? Your reaction, or one of:
-  [reply] [post] [thread] [article] [full tree] [skip] [research first]
+  [reply] [post] [thread] [article] [full tree] [skip]
+  [research first] [tutorial] [series-seed]
 ─────────────────────────────────────────────────
 ```
 
@@ -89,7 +90,9 @@ Wait for input.
 - `article` — create brief for long-form
 - `full tree` — create brief with all formats flagged, generate everything
 - `skip` — mark as skipped in index.db, move on
-- `research first` — note in index.db, suggest research skill, move on
+- `research first` — create brief with `next-action: research`, move on
+- `tutorial` — create brief with `next-action: tutorial`, move on
+- `series-seed` — create brief with `next-action: series-seed`, move on
 
 **Time-sensitive items:** After any approval, surface the urgency: "This one is time-sensitive — want me to draft the reply right now before we continue?"
 
@@ -108,6 +111,7 @@ format: {post | thread | article | post+article | full-tree | reply}
 platform: Both
 series-id: {series slug or blank}
 generate: {single | full-tree}
+next-action: {draft | research | tutorial | series-seed}
 ---
 
 ## Core Insight
@@ -135,9 +139,18 @@ generate: {single | full-tree}
 ## Series
 {Series name if applicable, which episode}
 
-## Source
-{original-url or raw file path}
+## Sources
+- Raw file: {path from inbox entry's **Raw file:** field}
+- External: {URL from inbox entry's **Original:** field}
+{Any other referenced files or URLs from the review}
+
+## Related Items
+- {ID} — {title or note, if cross-references surfaced during review}
 ```
+
+**Populating Sources:** Pull from both the inbox entry's `**Raw file:**` and `**Original:**` fields. If additional files or URLs were discussed during the review, include those too.
+
+**Setting next-action:** Default to `draft`. Use `research` if the user picked `[research first]`, `tutorial` for `[tutorial]`, `series-seed` for `[series-seed]`.
 
 ### Step 5: Update index.db
 
@@ -164,21 +177,26 @@ Draft the reply now? [yes / continue reviewing]
 
 ### Step 7: Session wrap-up
 
-After all items are reviewed, show a summary:
+After all items are reviewed, show a summary bucketed by next-action:
 
 ```
 Session complete. 2026-03-07 inbox:
   ✓ 5 approved → briefs written
   · 2 skipped
-  · 1 flagged for research
 
-Next:
-  - Draft all 5 now? [yes]
-  - Draft just the time-sensitive reply? [just the reply]
-  - Come back to drafting later? [done for now]
+  By next action:
+    draft:       3 items — ready to write
+    research:    1 item  — needs research first
+    series-seed: 1 item  — needs series planning
+
+Next steps:
+  - Draft the 3 ready items now? → /write-post, /write-article
+  - Research "Junior devs production gap"? → /research
+  - Plan the series arc? → open series.md
+  - Come back later? [done for now]
 ```
 
-If the user wants to draft: hand off to write-post / write-article with the brief paths.
+Offer to chain into the appropriate skill for each next-action bucket. Don't offer to draft items that need research or other work first.
 
 ### Step 8: Update _index.md
 

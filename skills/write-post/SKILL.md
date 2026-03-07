@@ -34,7 +34,11 @@ Read `content/pipeline/strategy.md` for current content themes and hot topics.
 
 ### Step 1: Understand the Input
 
-Identify:
+**Read sources first.** If the brief has a `## Sources` section, read each local file path before writing. For raw files, extract quotes, data points, and concrete examples. For research reports, pull key findings and synthesis. External URLs are noted for attribution only, not fetched.
+
+Build an evidence set from the source material. The post should draw on real substance, not just the one-sentence insight in the brief.
+
+Then identify:
 
 - The core insight, opinion, or information
 - The best angle (hot take? observation? how-to? experience? data point?)
@@ -109,7 +113,7 @@ Create the file if it doesn't exist. Format:
 ## [ ] {Post title/hook}
 
 **Platform:** Both
-**Source:** {where the idea came from}
+**Sources:** {list of source files/URLs from the brief}
 **Content ID:** {ID from brief, if available}
 
 **Twitter:**

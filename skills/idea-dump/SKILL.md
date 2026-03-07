@@ -99,16 +99,19 @@ Here's what we've decided:
 1. Vibe coding complexity → Thread + article (develop both now)
    Angle: "Counterintuitive" — creation is the easy part now
    Series: The Refinement Era (episode 3)
+   Next action: draft
 
 2. Attention to detail → Standalone post (develop now)
    Angle: "Hot take" — distilled from Dorsey angle
+   Next action: draft
 
 3. Junior devs / production gap → Research first, then content
    Suggest: kick off a research report, content follows immediately after
+   Next action: research
 
 4. AI as first draft → Skip (overlaps with #1)
 
-Ready to write briefs for items 1 and 2? Or adjust anything first?
+Ready to write briefs for items 1–3? Or adjust anything first?
 ```
 
 Wait for confirmation.
@@ -137,6 +140,7 @@ For each approved item:
    platform: Both
    series-id: {series-id or blank}
    generate: {single | full-tree}
+   next-action: {draft | research | tutorial | series-seed}
    ---
 
    ## Core Insight
@@ -145,7 +149,7 @@ For each approved item:
    ## Your Take
    {What the user said during the session — their angle, voice, direction}
 
-   ## Angle Selected
+   ## Lead Angle
    {Which angle from the breakdown}
 
    ## Content Tree
@@ -153,6 +157,13 @@ For each approved item:
 
    ## Draft Instructions
    {Specific guidance: tone, hooks to try, things to avoid, examples to reference}
+
+   ## Sources
+   - Thought bank: content/.scratchpad/thought-bank-YYYY-MM.md
+   {Any URLs or files referenced during the workshop}
+
+   ## Related Items
+   - {ID} — {title or note, if any existing pipeline items connect}
 
    ## Spinoffs
    {Follow-up ideas to capture in the thought bank}
@@ -179,18 +190,29 @@ For each approved item:
 
 6. **Update `content/inbox/_index.md`** — add rows for each new item.
 
-### Step 6: Offer to draft
+### Step 6: Offer next steps based on next-action
 
-After routing is confirmed, offer to generate content immediately:
+After routing is confirmed, offer the appropriate next step for each item based on its `next-action` value. Don't always offer to draft.
 
 ```
-Briefs are written for 2 items. Want me to:
-- Draft the thread for item 1 right now?
-- Draft the post for item 2 right now?
-- Or save that for a content session later?
+Briefs written for 3 items:
+
+  draft items:
+  - Item 1: Draft the thread + article now? → /write-post, /write-article
+  - Item 2: Draft the post now? → /write-post
+
+  research items:
+  - Item 3: Kick off research now? → /research
+
+Or save everything for later?
 ```
 
-If the user wants drafts now, invoke the `write-post` or `write-article` skill with the brief as input.
+| next-action | Offer |
+|-------------|-------|
+| `draft` | Invoke `write-post` / `write-article` |
+| `research` | Invoke `research` with the brief as context |
+| `tutorial` | Invoke `tutorial` with the brief as context |
+| `series-seed` | Open `series.md` and help plan the series arc |
 
 ---
 

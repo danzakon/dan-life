@@ -270,6 +270,7 @@ format: post | thread | article | post+article | full-tree | reply
 platform: Both | Twitter | LinkedIn
 series-id: slug or blank
 generate: single | full-tree
+next-action: draft | research | tutorial | series-seed
 ---
 
 ## Core Insight
@@ -287,8 +288,14 @@ What to develop — all applicable.
 ## Draft Instructions
 Specific guidance.
 
-## Source
-URL or raw file path.
+## Sources
+- Raw file: content/raw/{type}/{ID}-{slug}.md
+- Research: research/reports/{filename}.md
+- Tutorial: tutorials/guides/{filename}.md
+- External: https://...
+
+## Related Items
+- {ID} — {title or note}
 ```
 
 ---
@@ -321,29 +328,29 @@ The `idea-dump` skill clusters raw thoughts, identifies themes, and surfaces ser
 - [x] `content/pipeline/README.md` rewritten
 - [x] `content/pipeline/SYSTEM.md` — this file
 
-### New Skills (BUILD)
+### New Skills (DONE)
 - [x] `idea-dump` — conversational content workshop
 - [x] `youtube-monitor` — channel monitoring + transcript fetching (includes `fetch-transcript.py`)
 - [x] `content-digest` — score + rank inbox items
 - [x] `content-interview` — interactive inbox review → briefs
 - [x] `save-raw` — manual URL/content ingest
-- [ ] `content-refine` — iterative draft editing loop
-- [ ] `x-account-monitor` — scrape sources.md X accounts via xquery
-- [ ] `reply-monitor` — surface replies to @danzakon
-- [ ] `db-rebuild` — reconstruct index.db from file frontmatter
+- [x] `content-refine` — iterative draft editing loop
+- [x] `x-account-monitor` — scrape sources.md X accounts via xquery
+- [x] `reply-monitor` — surface replies to @danzakon
+- [x] `db-rebuild` — reconstruct index.db from file frontmatter
 - [x] `tutorial` — practical technical guide creation (parallel to research)
 
-### Skill Rewrites (UPDATE)
-- [ ] `content-pipeline` — full rewrite as session orchestrator
-- [ ] `bookmark-mining` — output to raw/ + inbox + ID assignment
-- [ ] `research` — inbox entry on completion + updated paths
-- [ ] `capture-thought` — series connection check + YYYY-MM-DD date format
-- [ ] `write-post` — read from briefs, content tree output, alt hooks
-- [ ] `write-article` — read from briefs, content tree output
-- [ ] `article-image` — 1200×628px, consistent style, PNG output
+### Skill Rewrites (DONE)
+- [x] `content-pipeline` — full rewrite as session orchestrator
+- [x] `bookmark-mining` — output to raw/ + inbox + ID assignment
+- [x] `research` — inbox entry on completion + updated paths
+- [x] `capture-thought` — series connection check + YYYY-MM-DD date format
+- [x] `write-post` — read from briefs, content tree output, alt hooks
+- [x] `write-article` — read from briefs, content tree output
+- [x] `article-image` — 1200×628px, consistent style, PNG output
 
-### Infrastructure (LATER)
-- [ ] Populate `sources.md` with actual X accounts + YouTube channels
+### Infrastructure
+- [x] Populate `sources.md` with actual X accounts + YouTube channels
 - [ ] Add Morning Ingest Cowork task (7:00 AM)
 - [ ] Add Morning Digest Cowork task (7:30 AM)
 - [ ] Update Daily Scheduler Cowork task (reference new paths)

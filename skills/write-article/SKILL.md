@@ -41,7 +41,11 @@ If you can't state the article's perspective in one sentence, you're not ready t
 
 ### Step 1: Find the Narrative
 
-Read whatever source material is provided. Ask:
+**Read all sources first.** If the brief has a `## Sources` section, read every local file path before analyzing the narrative. For research reports, focus on synthesis and key findings. For raw files, extract quotes, data points, and concrete examples. For tutorials, pull practical patterns and real-world context. External URLs are noted for attribution only, not fetched.
+
+Build an evidence set from the source material. The article's argument should be grounded in this substance.
+
+Then read whatever other source material is provided. Ask:
 
 - What's the single most interesting conclusion or take?
 - What would make someone stop and think "I didn't know that" or "I disagree"?
@@ -79,7 +83,8 @@ status: draft
 platform: x-article
 thumbnail: pending
 perspective: "{one-sentence perspective}"
-source: {where the idea came from}
+sources:
+  - {path or URL from brief's ## Sources}
 content-id: {ID from brief, if available}
 ---
 ```

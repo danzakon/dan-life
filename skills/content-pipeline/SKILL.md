@@ -99,7 +99,7 @@ Based on selection, invoke the appropriate skill or run the action inline:
 | Selection | Action |
 |-----------|--------|
 | A | Invoke `content-interview` skill |
-| B | Read approved briefs, invoke `write-post` / `write-article` for each |
+| B | Route approved briefs by `next-action` (see routing table below) |
 | C | Invoke `content-refine` skill |
 | D | Invoke `idea-dump` skill |
 | E | Run ingest agents (bookmark-mining, x-account-monitor, etc.) |
@@ -108,6 +108,19 @@ Based on selection, invoke the appropriate skill or run the action inline:
 | H | Invoke `save-raw` skill |
 | I | Run queue action (see below) |
 | J | Run health report (see below) |
+
+**Option B routing — check `next-action` before delegating:**
+
+Read each approved brief's frontmatter. Route based on the `next-action` field:
+
+| next-action | Action |
+|-------------|--------|
+| `draft` | Invoke `write-post` / `write-article` (current behavior) |
+| `research` | Invoke `research` with the brief path as context |
+| `tutorial` | Invoke `tutorial` with the brief path as context |
+| `series-seed` | Open `series.md`, help plan the series arc |
+
+After `research` or `tutorial` completes, update the brief: add the new report/guide path to `## Sources`, flip `next-action` to `draft`. Then offer to draft.
 
 After the delegated action completes, return to the session menu with an updated status. Continue until the user is done.
 
@@ -150,21 +163,29 @@ Generate a comprehensive pipeline health report:
 
 1. **Queue depth:** Posts queued, days of runway at cadence
 2. **Bottlenecks:** Items stuck at each stage (e.g., 5 drafts waiting for refine)
-3. **Thought bank:** Unused thought count, top themes
-4. **Unconverted research:** Reports in `research/reports/` not yet in the pipeline (check index.db for items with source_type='research')
-5. **Content mix:** Last 2 weeks of history.md vs. strategy.md theme distribution
-6. **Series status:** Active series from series.md, episodes delivered vs. planned
-7. **Recommendations:** 2–3 specific actions to take
+3. **Pending next-actions:** Briefs with `next-action` other than `draft` that haven't been actioned yet (research, tutorial, series-seed still pending)
+4. **Thought bank:** Unused thought count, top themes
+5. **Unconverted research:** Reports in `research/reports/` not yet in the pipeline (check index.db for items with source_type='research')
+6. **Content mix:** Last 2 weeks of history.md vs. strategy.md theme distribution
+7. **Series status:** Active series from series.md, episodes delivered vs. planned
+8. **Recommendations:** 2–3 specific actions to take
+
+To find briefs with pending next-actions, scan approved briefs for `next-action` values that aren't `draft`:
+
+```bash
+grep -l 'next-action: research\|next-action: tutorial\|next-action: series-seed' content/briefs/*.md
+```
 
 ```
 Pipeline Health Report — 2026-03-07
 ─────────────────────────────────────────
 
-Queue:       5 posts / 1.7 days runway — LOW
-Bottleneck:  3 drafts stuck in "draft" (need /content-refine)
-Thoughts:    4 unused across 1 month
-Research:    2 reports unconverted to content
-Series:      "The Refinement Era" — 2/4 episodes delivered
+Queue:        5 posts / 1.7 days runway — LOW
+Bottleneck:   3 drafts stuck in "draft" (need /content-refine)
+Pending work: 1 brief needs research, 1 needs series planning
+Thoughts:     4 unused across 1 month
+Research:     2 reports unconverted to content
+Series:       "The Refinement Era" — 2/4 episodes delivered
 
 Content Mix (last 2 weeks):
   engineering-take:  4 (target: 4) OK
@@ -174,8 +195,8 @@ Content Mix (last 2 weeks):
 
 Recommendations:
   1. Run /content-refine to clear the draft backlog
-  2. Write a practical how-to post (underrepresented)
-  3. Convert "AI agents in production" research report to content
+  2. Action the pending research brief → /research
+  3. Write a practical how-to post (underrepresented)
 ```
 
 ---

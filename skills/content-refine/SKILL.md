@@ -106,7 +106,7 @@ What do you want to do?
 
 Show the updated version and ask again. Keep iterating until approved.
 
-**rewrite** — Full rewrite with a different approach. Read the brief for the original angle and source, then generate a fresh draft. Show and ask for approval.
+**rewrite** — Full rewrite with a different approach. Read the brief, then read each file listed in `## Sources` to rebuild full context before rewriting. Generate a fresh draft grounded in the source material. Show and ask for approval.
 
 **skip** — Leave in draft status, move to the next item.
 
