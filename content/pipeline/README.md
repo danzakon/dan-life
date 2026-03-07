@@ -86,9 +86,24 @@ INGEST → DIGEST → INTERVIEW (human) → DRAFT → REFINE (human) → STAGE �
 
 ## Design Principles
 
-### 1. Briefs are the atomic unit
+### 1. Inbox and briefs serve different purposes
 
-Every idea that enters the system becomes a brief. Quick thoughts, bookmarks, YouTube videos, research reports, raw idea dumps — all of them get an ID, a brief file, and a database entry. No side channels, no untracked parking lots. If it's worth capturing, it's worth tracking.
+**Inbox entries** are for triage. They represent content that arrived passively — a bookmark saved, a YouTube video from a monitored channel, a post from an X account. You haven't reacted yet. The inbox entry is the agent surfacing what's worth your attention: a summary, the strongest angles, timestamps for long-form content. It's a lead, not a commitment. The content-interview session is where you react.
+
+**Briefs** are work orders. They contain your take, your selected angle, and instructions for drafting. The agent can write from a brief immediately. A brief is created when you commit to developing an idea — either during content-interview (for passive ingest) or directly (for idea-dump, capture-thought, or when you already have a take from watching/reading something).
+
+The practical distinction: **inbox = "I received this"** / **brief = "I decided this"**.
+
+Some sources skip the inbox entirely and write a brief directly, because you're already in an active session with a take:
+
+| Flow | Through inbox? | Why |
+|------|---------------|-----|
+| bookmark-mining, X monitors, youtube-monitor, watch-later-mining | Yes | Passive ingest — you haven't reacted yet |
+| idea-dump | No | You're in a live workshop session, take is captured in real time |
+| capture-thought | No | You have the thought right now; no triage needed |
+| save-raw (manual URL + "workshop now") | Optional | You can go direct to brief if you already have a take |
+
+Everything that enters the system gets an ID and a database entry regardless. The brief may start minimal (just frontmatter + core insight from the agent's read) and get developed during interview, or it may be fully written in one session. No side channels, no untracked parking lots.
 
 ### 2. IDs are stable and namespaced
 
@@ -236,10 +251,13 @@ All ingest agents share the same output contract:
 
 1. **Assign a namespaced ID** — query `index.db` for the highest number for that source prefix today, increment
 2. **Write source content** to `raw/{type}/YYYYMMDD-SRC-NNN-{slug}.md` (when applicable — some sources like capture-thought have no raw file)
-3. **Write a brief** to `briefs/YYYYMMDD-SRC-NNN.md`
-4. **Register in `index.db`** — INSERT with `status: 'raw'`
-5. **Write inbox entry** to `inbox/YYYY-MM-DD.md`
-6. **Update `inbox/_index.md`**
+3. **Register in `index.db`** — INSERT with `status: 'raw'`
+4. **Write inbox entry** to `inbox/YYYY-MM-DD.md` (passive ingest sources: bookmark-mining, X monitors, youtube-monitor, watch-later-mining, save-raw, research, tutorial)
+   — OR —
+   **Write a brief directly** to `briefs/YYYYMMDD-SRC-NNN.md` (active session sources: idea-dump, capture-thought)
+5. **Update `inbox/_index.md`**
+
+Passive sources write an inbox entry; the brief is created later during content-interview when you give your take. Active session sources write the brief immediately because your take is captured in real time.
 
 **Automated (daily 7:00 AM Cowork task):**
 
