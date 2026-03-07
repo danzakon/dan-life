@@ -14,14 +14,38 @@ Build a presence in the AI/tech space by sharing insights that resonate. The goa
 
 ```
 content/
-├── .scratchpad/           # Unstructured ideation (ideas, research, fragments)
-│   └── .history/          # Archived scratchpad files
-├── posts/                 # Short-form: tweets, LinkedIn posts (weekly files)
-│   └── W4-01-26.md
-├── articles/              # Long-form: full essays (one per file)
-│   ├── drafts/            # Work in progress
-│   └── published/         # Live articles
-└── CLAUDE.md
+├── CLAUDE.md
+├── pipeline/              # CONTROL PLANE: ops config + live state
+│   ├── README.md          # Full system documentation
+│   ├── strategy.md        # Content themes, voice, cadence
+│   ├── sources.md         # X accounts + YouTube channels to monitor
+│   ├── series.md          # Ongoing content series tracker
+│   ├── queue.md           # Approved posts pending scheduling
+│   ├── history.md         # Published content log (dedup)
+│   ├── index.db           # SQLite index (all items + pipeline state)
+│   ├── schema.sql         # DB schema source of truth
+│   ├── migrations/        # Schema migration scripts
+│   └── cowork-tasks.md    # Cowork scheduled task setup + prompts
+├── inbox/                 # DAILY INTAKE: signals from ingest agents
+│   ├── _index.md          # Item registry + day status
+│   └── YYYY-MM-DD.md      # One file per day (summaries + angles)
+├── raw/                   # SOURCE MATERIAL: full content, never truncated
+│   ├── x-posts/           # Tweets and threads
+│   ├── x-articles/        # X long-form articles
+│   ├── youtube/           # Video transcripts
+│   └── web/               # Substack, blogs, anything else
+├── briefs/                # POST-INTERVIEW WORK ITEMS
+│   └── YYYYMMDD-SRC-NNN.md
+├── posts/                 # SHORT-FORM DRAFTS (weekly files)
+│   └── W{week}-{month}-{year}.md
+├── articles/
+│   ├── drafts/
+│   └── published/
+├── images/
+│   ├── prompts/
+│   └── {slug}-og.png
+└── .scratchpad/           # Unstructured ideation (thought banks)
+    └── .history/
 ```
 
 ---
@@ -41,19 +65,21 @@ Short-form content: tweets, LinkedIn posts, quick takes. Organized by **week** t
 ### Naming Convention
 
 ```
-W{week}-{month}-{year}.md
+{YYYY}-W{NN}.md
 
 Examples:
-W1-01-26.md   # Week 1 of January 2026
-W52-12-25.md  # Week 52 of December 2025
+2026-W01.md   # Week 1 of 2026
+2026-W52.md   # Week 52 of 2026
 ```
+
+Year first, zero-padded week number — sorts chronologically.
 
 ### Post File Format
 
 Each file contains multiple posts. Use checkboxes to track posting status:
 
 ```markdown
-# Posts — Week 4, January 2026
+# Posts — 2026-W04
 
 ---
 

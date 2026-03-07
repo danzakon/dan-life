@@ -32,9 +32,9 @@ The scorecard reflects what actually predicts success in a client-facing, fast-m
 | Dimension | What It Measures |
 |-----------|------------------|
 | **Delivery** | Gets things done reliably and on time |
-| **Communication** | Surfaces issues early, with clients and team |
-| **Judgment** | Scopes well, solves problems independently, finds the right-sized solution |
-| **Craft** | Technical quality and process rigor |
+| **Communication** | Quality of communication with clients, strategists, and the team |
+| **Craft** | Builds the right thing and builds it well — scoping, quality, standards |
+| **Ownership** | Initiative, team-first behavior, willingness to do what needs doing |
 | **Capacity** | Managing load, sustainability |
 
 ---
@@ -55,43 +55,43 @@ The scorecard reflects what actually predicts success in a client-facing, fast-m
 
 ## Dimension 2: Communication
 
-**What it measures:** Proactive, clear communication with clients and teammates.
+**What it measures:** Quality of communication across all audiences — clients, strategists, and the internal team. This covers both the substance (right info, right time) and the style (concise, adaptive, good listener).
 
 | Level | Behaviors |
 |-------|-----------|
-| **Struggling (1-2)** | Surprises you or the client with problems that were known earlier. Goes dark during complex work—hard to know status. Written updates are unclear or require follow-up questions. Avoids difficult conversations. |
-| **Meeting (3)** | Surfaces blockers within 24 hours of identifying them. Provides clear status updates without being asked. Communicates appropriately with clients (knows when to loop in leadership). Asks clarifying questions rather than making assumptions. |
-| **Excelling (4-5)** | Proactively identifies risks before they're problems and proposes solutions. Clients specifically praise their communication. Can translate technical concepts for non-technical stakeholders. Creates clarity for others on the project. |
+| **Struggling (1-2)** | Surprises you or the client with problems that were known earlier. Goes dark during complex work — hard to know status. Written updates are unclear or require follow-up questions. Avoids difficult conversations. Poor signal-to-noise ratio — over-communicates irrelevant detail or under-communicates critical info. Doesn't adapt communication style to the audience. |
+| **Meeting (3)** | Surfaces blockers within 24 hours of identifying them. Provides clear status updates without being asked. Communicates appropriately with clients — knows when to loop in leadership. Works well with strategists on scoping and priorities. Asks clarifying questions rather than making assumptions. Listens actively, doesn't talk over others. |
+| **Excelling (4-5)** | Clients and strategists specifically praise working with them. Translates technical concepts for non-technical stakeholders. Creates clarity for the whole project. Proactively identifies risks and proposes solutions. Knows when to escalate vs. handle directly. |
 
-**Key question:** Do I ever get surprised by something this person knew but didn't tell me?
+**Key question:** How effective is this person at communicating with clients, strategists, and the team?
 
 ---
 
-## Dimension 3: Judgment
+## Dimension 3: Craft
 
-**What it measures:** Ability to scope work appropriately, solve problems independently, and find the right-sized solution.
+**What it measures:** The full arc of engineering work — scoping the right solution, building it well, and maintaining quality standards. This merges technical judgment with technical execution.
 
 | Level | Behaviors |
 |-------|-----------|
-| **Struggling (1-2)** | Over-engineers solutions or builds the wrong thing entirely. Needs detailed instructions to start work. Gets stuck and waits rather than seeking solutions. Can't distinguish between what matters and what doesn't—treats every task as equally important. Adds complexity without clear value. |
-| **Meeting (3)** | Breaks problems into reasonable chunks and tackles them in priority order. Researches problems independently before escalating. Proposes solutions, not just problems. Knows when "good enough" is right and when to push for more. Scopes work to match the actual need, not the theoretical ideal. |
-| **Excelling (4-5)** | Consistently finds the simplest solution that fully solves the problem. Identifies work that needs doing and does it without being asked. Pushes back on scope when a smaller solution would serve the goal. Makes good trade-offs under uncertainty—comfortable deciding with incomplete information. Others seek their input on "should we build this?" questions. |
+| **Struggling (1-2)** | Over-engineers solutions or builds the wrong thing entirely. Needs detailed instructions to start work. Can't distinguish between what matters and what doesn't — treats every task as equally important. Skips documentation, testing, or code review. Creates technical debt without awareness. Adds complexity without clear value. |
+| **Meeting (3)** | Scopes work to match the actual need, not the theoretical ideal. Breaks problems into reasonable chunks and tackles them in priority order. Proposes solutions, not just problems. Knows when "good enough" is right. Follows team coding standards. Writes tests. Documents work appropriately. |
+| **Excelling (4-5)** | Consistently finds the simplest solution that fully solves the problem. Pushes back on scope when a smaller solution would serve the goal. Makes good trade-offs under uncertainty. Raises the bar for code quality on the team. Catches issues in others' code during review. Others seek their input on "should we build this?" questions. |
 
-**Key question:** Does this person consistently find the right-sized solution to problems?
+**Key question:** Does this person build the right thing, and build it well?
 
 ---
 
-## Dimension 4: Craft
+## Dimension 4: Ownership
 
-**What it measures:** Technical quality and adherence to engineering standards.
+**What it measures:** Initiative, team-first behavior, and willingness to do what needs doing — especially when it's not glamorous or visible.
 
 | Level | Behaviors |
 |-------|-----------|
-| **Struggling (1-2)** | Skips documentation, testing, or code review. Creates technical debt without awareness. Doesn't follow established patterns—reinvents unnecessarily. Code requires extensive review feedback on basics. |
-| **Meeting (3)** | Follows team coding standards and patterns. Writes tests for new functionality. Documents work appropriately (PRs, tickets, handoff notes). Code reviews are straightforward—few major issues. |
-| **Excelling (4-5)** | Raises the bar for code quality on the team. Catches issues in others' code during review. Improves processes and documentation proactively. Balances craft with pragmatism—knows when "good enough" is right. |
+| **Struggling (1-2)** | Cherry-picks interesting work and avoids the rest. Leaves messes for others to clean up. Needs to be told what to do next. Doesn't follow through when things get tedious or difficult. Treats unglamorous work as beneath them. |
+| **Meeting (3)** | Takes on tedious work without complaint. Follows through on commitments even when they're boring. Helps teammates when asked. Doesn't leave loose ends. Does what needs doing without making it someone else's problem. |
+| **Excelling (4-5)** | Volunteers for the work nobody wants. Notices what needs doing and does it without being asked. Takes one for the team and doesn't keep score. Makes others' lives easier by their presence on the project. Models the kind of teammate everyone wants to work with. |
 
-**Key question:** Does this person leave the codebase better than they found it?
+**Key question:** Does this person do what needs doing, even when it's not glamorous or visible?
 
 ---
 
@@ -186,7 +186,7 @@ Reward with visibility, interesting projects, and growth opportunities. Don't le
 
 The dimensions map to growth:
 - **Delivery + Craft**: Core competence, must be solid before advancement
-- **Communication + Judgment**: Leadership potential, scope expansion
+- **Communication + Ownership**: Leadership potential, scope expansion, trust
 - **Capacity**: Sustainability, readiness for more responsibility
 
 Someone who's 5/5 on Delivery and Craft but 2/2 on Communication and Ownership isn't ready for senior roles, even if their code is excellent.
@@ -201,4 +201,5 @@ Someone who's 5/5 on Delivery and Craft but 2/2 on Communication and Ownership i
 | High Delivery, Low Craft | Cutting corners, technical debt accumulation |
 | Low Communication across the board | Disengagement, fear, unclear expectations |
 | Declining Capacity over months | Burnout trajectory, unsustainable assignment |
-| High Judgment, Low Delivery | Analysis paralysis, or scoping well but not executing |
+| High Delivery, Low Ownership | Gets their stuff done but creates drag for everyone else |
+| High Ownership, Low Craft | Great attitude but needs technical development |

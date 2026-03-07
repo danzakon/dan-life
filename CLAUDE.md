@@ -42,12 +42,14 @@ Most directories support a `.scratchpad/` subfolder for active working documents
 ### File Naming Convention
 
 ```
-{M-DD-YY}-{title}.md
+{YYYY-MM-DD}-{title}.md
 
 Examples:
-1-12-26-quarterly-planning.md
-1-12-26-content-ideas.md
+2026-01-12-quarterly-planning.md
+2026-01-12-content-ideas.md
 ```
+
+ISO date prefix. Year first so files sort chronologically by filename.
 
 ### Archival Rules
 

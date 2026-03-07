@@ -16,7 +16,7 @@ A place to capture research on technical topics, tools, frameworks, and ideas wo
 research/
 ├── .scratchpad/           # Active research notes
 │   └── .history/          # Archived research
-├── {topic-folders}/       # Organized by subject area
+├── reports/               # Completed research reports (content source)
 └── CLAUDE.md
 ```
 
@@ -215,6 +215,30 @@ Use inline citations throughout:
 - "Data from [Source](url) shows..."
 
 No footnotes or endnotes. Keep sources visible where claims are made.
+
+### Pipeline Integration
+
+When a research report is complete, register it in the content pipeline:
+
+1. Write the report to `research/reports/{YYYY}-{MM}-{slug}.md`
+2. Add the report's YAML frontmatter with the pipeline ID:
+   ```yaml
+   ---
+   id: {YYYYMMDD-RS-NNN}       # assigned by the research skill
+   date: YYYY-MM-DD
+   category: Research Report
+   status: complete
+   content-status: raw         # raw | inbox | converted
+   ---
+   ```
+3. Register in `content/pipeline/index.db`:
+   ```bash
+   sqlite3 content/pipeline/index.db "INSERT INTO items (id, created_at, source_type, ingest_source, status, current_title, raw_file) VALUES ('{id}', '{datetime}', 'research', 'research', 'raw', '{title}', 'research/reports/{filename}');"
+   ```
+4. Add an entry to `content/inbox/{YYYY-MM-DD}.md` with summary and content angles
+5. Update `content/inbox/_index.md`
+
+The content pipeline's interview step will surface the report for conversion to posts or articles.
 
 #### Quality Bar
 
