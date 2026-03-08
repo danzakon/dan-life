@@ -16,7 +16,7 @@ The `index.db` SQLite database is the authoritative source — this file mirrors
 | 2026-02-07 | 1 | 1 | reviewed |
 | 2026-02-28 | 2 | 2 | reviewed |
 | 2026-03-07 | 16 | 0 | unreviewed |
-| 2026-03-08 | 1 | 0 | unreviewed |
+| 2026-03-08 | 16 | 0 | unreviewed |
 
 ---
 
@@ -48,3 +48,18 @@ The `index.db` SQLite database is the authoritative source — this file mirrors
 | 20260307-AD-013 | 2026-03-07 | content-pipeline | thought | New Skills for the AI Era | raw |
 | 20260307-AD-014 | 2026-03-07 | content-pipeline | thought | Managing Entropy in Autonomous Coding | raw |
 | 20260308-RS-001 | 2026-03-08 | research | research | The Agent Stack: A Component Map for Production Agent Systems | raw |
+| 20260308-AD-001 | 2026-03-08 | research | content-pipeline | AI supercharged scientists and shrunk science at the same time | approved |
+| 20260308-AD-002 | 2026-03-08 | research | content-pipeline | A lab that runs 1,000 experiments a day without human intervention | approved |
+| 20260308-AD-003 | 2026-03-08 | research | content-pipeline | The AI talent war isn't about PhDs — it's about electricians | approved |
+| 20260308-AD-004 | 2026-03-08 | research | content-pipeline | Three Mile Island is reopening to power ChatGPT | approved |
+| 20260308-AD-005 | 2026-03-08 | research | content-pipeline | Tech companies decided to become power utilities | approved |
+| 20260308-AD-006 | 2026-03-08 | research | content-pipeline | The $1B sandbox market nobody talks about | approved |
+| 20260308-AD-007 | 2026-03-08 | research | content-pipeline | When AI writes code, containers aren't enough to contain it | approved |
+| 20260308-AD-008 | 2026-03-08 | research | content-pipeline | The math on running AI code at scale | approved |
+| 20260308-AD-009 | 2026-03-08 | research | content-pipeline | How to cut voice AI latency 5x | approved |
+| 20260308-AD-010 | 2026-03-08 | research | content-pipeline | Half the teams building on managed voice platforms abandon them within 12 months | approved |
+| 20260308-AD-011 | 2026-03-08 | research | content-pipeline | The demo-to-production gap in AI agents is an infrastructure problem | approved |
+| 20260308-AD-012 | 2026-03-08 | research | content-pipeline | Stripe's trick for reliable AI code: make the agent skip nothing | approved |
+| 20260308-AD-013 | 2026-03-08 | research | content-pipeline | The metric that matters for AI coding isn't speed | approved |
+| 20260308-AD-014 | 2026-03-08 | research | content-pipeline | If it's not in the repo, agents can't see it | approved |
+| 20260308-AD-015 | 2026-03-08 | research | content-pipeline | Comparing agent memory: Letta vs Mem0 vs Zep | approved |
