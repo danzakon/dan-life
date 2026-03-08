@@ -16,6 +16,7 @@ The `index.db` SQLite database is the authoritative source — this file mirrors
 | 2026-02-07 | 1 | 1 | reviewed |
 | 2026-02-28 | 2 | 2 | reviewed |
 | 2026-03-07 | 16 | 0 | unreviewed |
+| 2026-03-08 | 1 | 0 | unreviewed |
 
 ---
 
@@ -46,3 +47,4 @@ The `index.db` SQLite database is the authoritative source — this file mirrors
 | 20260307-AD-012 | 2026-03-07 | content-pipeline | thought | Manus Under the Hood | raw |
 | 20260307-AD-013 | 2026-03-07 | content-pipeline | thought | New Skills for the AI Era | raw |
 | 20260307-AD-014 | 2026-03-07 | content-pipeline | thought | Managing Entropy in Autonomous Coding | raw |
+| 20260308-RS-001 | 2026-03-08 | research | research | Agentic SDLC: Maximizing Leverage Across a Big Engineering Team | raw |
