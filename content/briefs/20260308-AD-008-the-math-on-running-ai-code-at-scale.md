@@ -22,3 +22,28 @@ Use the real numbers from the research: $0.005 per 5-minute session on E2B or Da
 
 ## Related Items
 - 20260308-AD-006
+
+---
+
+## Content Tree
+
+### Post Excerpts (draft these -- ready for write-post)
+
+1. **The warm pool trap**: "Keeping 1,000 idle VMs warm on E2B costs $36K/month. The same capacity on EC2 costs $1,659. That's a 20x premium for compute that does nothing but wait. If your AI product needs fast response times at scale, warm pool economics matter more than per-session pricing."
+
+2. **The billing granularity post**: "A 30-second AI code execution task costs $0.00042 with per-second billing. The same task with per-hour billing costs $0.05. That's 120x more. At a million sessions per day, the difference is $420/day versus $50,000/day. Before you compare sandbox platforms, check how they bill."
+
+3. **The sequential decision**: "Start with a managed sandbox platform. Every time. But know your break-even: 200K-500K sessions per day. If your growth points there within 18 months, start building DIY Firecracker infrastructure now. The 6-12 month build time means you need to move before the economics force your hand."
+
+### Thread Potential
+
+Yes. The article compresses well into a 6-tweet thread: (1) the per-session cost, (2) how it scales, (3) warm pool trap, (4) billing granularity, (5) break-even point, (6) the sequential strategy.
+
+### Series Connection
+
+No active series match. Could seed a new "Infrastructure Economics" series if paired with the sandbox market article (AD-006) and the containers security article (AD-007).
+
+### Thumbnail Concept
+
+1. A simple cost curve chart showing two lines diverging: "Managed" scaling linearly upward and "DIY" flattening out, with the crossover point labeled "200K-500K sessions/day". Clean, minimal, dark background.
+2. A calculator or spreadsheet aesthetic with the key number "$0.005" prominently displayed, scaling up to "$135K/mo" with an arrow.

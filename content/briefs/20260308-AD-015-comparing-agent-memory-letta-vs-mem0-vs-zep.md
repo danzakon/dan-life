@@ -8,7 +8,7 @@ format: article
 platform: Both
 series-id:
 generate: single
-next-action: research
+next-action: draft
 ---
 
 ## Core Insight
@@ -22,6 +22,7 @@ Compare Letta vs Mem0 vs Zep/Graphiti in depth. Focus on: architecture differenc
 
 ## Sources
 - research/reports/20260308-agent-stack-component-map.md
+- research/reports/20260308-agent-memory-comparison.md
 
 ## Related Items
 - 20260308-AD-011

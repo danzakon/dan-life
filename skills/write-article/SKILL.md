@@ -100,21 +100,11 @@ sqlite3 content/pipeline/index.db \
    WHERE id = '{ID}';"
 ```
 
-### Step 6: Assess Content Tree
+### Step 6: Write Post Excerpts and Content Tree to the Brief
 
-After writing, always assess what else this article unlocks. Develop all applicable formats now:
+Append the Content Tree to the **brief file** — NOT the article. The article must remain clean and publishable. Nothing should appear after the final paragraph of the article file.
 
-- **Post excerpts**: 2-3 sections that work as standalone posts to promote the article. Draft them inline.
-- **Thread**: Could the article's argument be compressed into a tweetstorm?
-- **Series**: Does this article fit an active series in `content/pipeline/series.md`? Flag the connection.
-
-### Step 7: Suggest Thumbnail Concept
-
-Suggest 1-2 image concepts for the thumbnail. Don't generate the image. Just describe the visual concept so the user can invoke `article-image` when ready.
-
-### Step 8: Write Post Excerpts and Content Tree
-
-At the bottom of the article file:
+Find the brief using the `content-id` from the article frontmatter: `content/briefs/{content-id}*.md`. Append to the end of that file:
 
 ```markdown
 ---
@@ -131,7 +121,13 @@ At the bottom of the article file:
 
 ### Series Connection
 {Series name if applicable, which episode this would be}
+
+### Thumbnail Concepts
+1. {visual concept — describe for article-image skill}
+2. {visual concept}
 ```
+
+**The article file ends where the writing ends.** No separator, no heading, no Content Tree.
 
 ---
 
