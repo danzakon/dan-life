@@ -257,7 +257,7 @@ content/pipeline/
 content/
 ├── inbox/            ← Daily intake files (YYYY-MM-DD.md)
 ├── raw/              ← Source material (x-posts/, youtube/, web/)
-├── briefs/           ← Work items (YYYYMMDD-SRC-NNN.md)
+├── briefs/           ← Work items (YYYYMMDD-SRC-NNN-{slug}.md)
 ├── posts/            ← Weekly post drafts (YYYY-W{NN}.md)
 └── articles/         ← Long-form (drafts/ + queued/ + published/)
 

@@ -20,7 +20,7 @@ INGEST → DIGEST → INTERVIEW (human) → DRAFT → REFINE (human) → STAGE �
 │                          │                                          │
 │                          ▼                                          │
 │  raw/{type}/              ← full source content (when applicable)   │
-│  briefs/YYYYMMDD-SRC-NNN.md  ← every item gets a brief             │
+│  briefs/YYYYMMDD-SRC-NNN-{slug}.md  ← every item gets a brief      │
 │  pipeline/index.db        ← item registered with ID                 │
 │  inbox/YYYY-MM-DD.md      ← summary + angles                       │
 └──────────────────────────┬──────────────────────────────────────────┘
@@ -129,7 +129,7 @@ Every item receives an ID at ingestion: `YYYYMMDD-{SOURCE}-NNN`. Source prefixes
 Each source maintains its own sequential counter per day. No coordination needed between concurrent agents — different namespaces cannot collide.
 
 IDs appear in:
-- Brief filenames: `briefs/20260307-BM-001.md`
+- Brief filenames: `briefs/20260307-BM-001-levelsio-pricing-strategy.md`
 - Raw filenames: `raw/x-posts/20260307-BM-001-levelsio-pricing.md`
 - File frontmatter: `id: 20260307-BM-001`
 - Inbox entries: `## [20260307-BM-001] @levelsio — Pricing`
@@ -194,7 +194,7 @@ content/
 │   ├── youtube/                     # Video transcripts
 │   └── web/                         # Substack, blogs, anything else
 ├── briefs/                          # WORK ITEMS (the atomic unit)
-│   └── YYYYMMDD-{SRC}-NNN.md       # One brief per item
+│   └── YYYYMMDD-{SRC}-NNN-{slug}.md  # One brief per item
 ├── posts/                           # SHORT-FORM DRAFTS
 │   └── YYYY-W{NN}.md               # Weekly files, multiple posts each
 ├── articles/
@@ -252,7 +252,7 @@ All ingest agents share the same output contract:
 3. **Register in `index.db`** — INSERT with `status: 'raw'`
 4. **Write inbox entry** to `inbox/YYYY-MM-DD.md` (passive ingest sources: bookmark-mining, X monitors, youtube-monitor, watch-later-mining)
    — OR —
-   **Write a brief directly** to `briefs/YYYYMMDD-SRC-NNN.md` (active session: content-pipeline Add mode)
+   **Write a brief directly** to `briefs/YYYYMMDD-SRC-NNN-{slug}.md` (active session: content-pipeline Add mode)
 5. **Update `inbox/_index.md`**
 
 Passive sources write an inbox entry; the brief is created later during content-interview when you give your take. Content-pipeline's Add mode writes the brief immediately because your take is captured in real time.

@@ -201,6 +201,18 @@ GOOD: The agent itself matters less than what the approach reveals.
 | multifaceted | complex, complicated, layered |
 | underscores | shows, highlights, proves |
 
+**Short-sentence stacking for dramatic effect.** Rapid-fire short fragments feel theatrical, not confident. Collapse them into one clean sentence instead.
+
+```
+BAD:  No cloud APIs. No per-query costs. No data leaving your machine.
+GOOD: No cloud APIs, per-query costs, or data leaving your machine.
+
+BAD:  Just good. Full stop.
+GOOD: Just good.
+```
+
+The tell is three or more very short sentences in a row that each make a related point. One sentence with a list, or simply stopping after the statement lands, is almost always stronger.
+
 **Structural tells to avoid:**
 
 - Starting with "In today's [X]" or "In the world of [X]"

@@ -16,8 +16,7 @@ This repository is an operating system for managing life—work, content, resear
 life/
 ├── content/           # Social media content (AI engineering, tech, business)
 ├── skills/            # Agent skill definitions, symlinked to all agent dirs
-├── tutorials/         # Step-by-step technical guides (output of tutorial skill)
-├── technical-guides/  # Personal reference docs: tool setup, infra, environments
+├── tutorials/         # Step-by-step technical guides: tutorial skill output + personal setup guides
 ├── research/          # Research reports and explorations (output of research skill)
 ├── tenex/             # Engineering leadership and process development
 ├── prompts/           # Prompt templates and experiments

@@ -35,7 +35,7 @@ content/
 │   ├── youtube/
 │   └── web/
 ├── briefs/                # WORK ITEMS: the atomic unit of the pipeline
-│   └── YYYYMMDD-SRC-NNN.md
+│   └── YYYYMMDD-SRC-NNN-{slug}.md
 ├── posts/                 # SHORT-FORM DRAFTS (weekly files)
 │   └── YYYY-W{NN}.md
 ├── articles/
@@ -138,14 +138,14 @@ platform: blog | medium | substack
 
 ### Briefs
 
-One brief per pipeline item:
+One brief per pipeline item, with a human-readable slug derived from the item title:
 
 ```
-YYYYMMDD-{SRC}-NNN.md
+YYYYMMDD-{SRC}-NNN-{slug}.md
 
 Examples:
-20260307-BM-001.md
-20260307-AD-003.md
+20260307-BM-001-levelsio-pricing-strategy.md
+20260307-AD-003-mobile-first-agent-ui-patterns.md
 ```
 
 See [pipeline/README.md](pipeline/README.md) for the full brief format and ID prefix table.

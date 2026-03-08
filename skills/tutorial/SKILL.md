@@ -99,9 +99,9 @@ Save each subagent's output to `.scratchpad/`:
 
 ```
 .scratchpad/
-├── YYYY-MM-DD-{topic}-setup-research.md
-├── YYYY-MM-DD-{topic}-api-research.md
-└── YYYY-MM-DD-{topic}-deployment-research.md
+├── YYYYMMDD-{topic}-setup-research.md
+├── YYYYMMDD-{topic}-api-research.md
+└── YYYYMMDD-{topic}-deployment-research.md
 ```
 
 ---

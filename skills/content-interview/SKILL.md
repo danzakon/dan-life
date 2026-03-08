@@ -109,7 +109,7 @@ Wait for input.
 
 ### Step 4: Write the brief
 
-For each approved item, assign the next available ID sequence and write `content/briefs/{ID}.md`:
+For each approved item, assign the next available ID sequence. Generate a slug from the item title (lowercase, alphanumeric + hyphens, max 50 chars), then write `content/briefs/{ID}-{slug}.md`:
 
 ```markdown
 ---
@@ -168,7 +168,7 @@ next-action: {draft | research | tutorial | series-seed}
 ```bash
 # Approve and link brief
 sqlite3 content/pipeline/index.db \
-  "UPDATE items SET status = 'approved', brief_file = 'content/briefs/{ID}.md'
+  "UPDATE items SET status = 'approved', brief_file = 'content/briefs/{ID}-{slug}.md'
    WHERE id = '{original-item-id}';"
 
 # Skip

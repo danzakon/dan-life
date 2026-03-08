@@ -1,55 +1,31 @@
 ---
-title: "QMD: What Cutting-Edge Search Looks Like for AI Agents"
+title: "The CEO of Shopify Built the Best Search Tool for AI Agents. That Should Embarrass the Industry."
 content-id: 20260201-AD-003
 status: draft
 platform: blog
 ---
 
-# QMD: What Cutting-Edge Search Looks Like for AI Agents
+# The CEO of Shopify Built the Best Search Tool for AI Agents. That Should Embarrass the Industry.
 
-Search is the bottleneck for AI applications, and most people are solving it wrong.
+Tobi Lütke runs a $100B+ company. He manages thousands of employees, overseas billions in GMV, and sits in the chair that determines the strategic direction of one of the most important companies in commerce.
 
-Before I get into QMD, the tool that prompted this piece, let me explain why search matters so much and why it's harder than it looks.
+He also found time to build QMD — a local-first hybrid search tool for AI agents that is, technically, better than what most dedicated AI teams have shipped.
 
-## The Search Problem Nobody Talks About
+Let that sit.
 
-Every AI assistant that works with your documents, code, or notes faces a fundamental question: how do you find the right context to give the model?
+There are entire companies whose sole focus is search infrastructure for AI. There are teams of engineers at every major AI lab thinking about retrieval. Millions of developers have bumped into this exact problem — how do you find the right context to feed a model without burning tokens or missing what matters? — and most of them reached for grep, stuffed embeddings into Pinecone, or gave up and expanded the context window.
 
-The naive answer is "just put everything in the context window." This fails immediately at scale. A 1M token context window sounds huge until you realize most codebases are 100K-10M+ lines of code. And even if it fit, loading a million tokens per query at $3/million tokens means $3 per question. At 100 queries/day, that's $9,000/month. Nobody's paying that.
+Tobi Lütke built QMD, open-sourced it, and 4.4k GitHub stars later it's quietly become the most thoughtful implementation of this pattern available to individual developers. Not "pretty good for a side project." Just good. Full stop.
 
-So you need retrieval. You need to find the relevant pieces before sending them to the model. But there are fundamentally different ways to search, and each has tradeoffs.
+## What QMD Is
 
-## How Search Actually Works
+QMD (Quick Markdown Search) is a local-first hybrid search engine with MCP integration, designed to give AI agents sophisticated retrieval over your local documents and code. No cloud APIs. No per-query costs. No data leaving your machine.
 
-There are two main approaches, and understanding them matters for what comes next.
-
-**Keyword search (BM25)** is what you'd expect. You type "authentication," it finds documents containing "authentication." Fast, precise, great when you know exactly what you're looking for. The algorithm (BM25 is the modern standard) scores documents based on term frequency and document length. It's been the backbone of search engines for decades.
-
-The problem: it can't handle synonyms or conceptual queries. Search for "auth" and you won't find "authentication." Search for "where do we handle login" and you'll miss the file called `IdentityManager.ts`. There's no understanding of meaning, just pattern matching.
-
-**Semantic/vector search** solves this by converting text into numerical representations (embeddings) that capture meaning. "Authentication" and "login" end up close together in vector space because they're conceptually related. You can ask "where do we handle user identity" and find relevant code even if those exact words never appear.
-
-The problem: it can lose precision. Search for the exact function `getUserById` and you might get back a bunch of files about users, IDs, and databases that are conceptually related but not what you wanted.
-
-**Hybrid search** combines both. Run keyword and semantic search in parallel, merge the results, get the benefits of both. Documents that rank highly in both methods get boosted. Documents that only one method finds still surface.
-
-The implementation matters. How do you merge two ranked lists? The standard approach is Reciprocal Rank Fusion (RRF): `score = Σ 1/(rank + 60)`. Simple, stable, requires no tuning.
-
-**Re-ranking** is the final layer. Take your top results and run them through a more sophisticated model that scores relevance more carefully. This catches cases where both retrieval methods ranked something highly but it's actually off-topic. Cohere's benchmarks show re-ranking adds 39% improvement on average. That's not marginal.
-
-## Enter QMD
-
-Now you have context for why QMD matters.
-
-Tobi Lütke, Shopify's founder, released QMD (Quick Markdown Search) as an open-source project. 4.4k GitHub stars later, it's clear this scratched an itch.
-
-QMD combines everything I just described into a single local-first tool: hybrid search with query expansion and re-ranking, running entirely on your machine, with native integration for AI agents.
-
-No cloud APIs. No sending your documents anywhere. No per-query costs. Just download some models and go.
+If you've read about the [hybrid search landscape for AI tools](https://danzakon.com/articles/hybrid-search), QMD is the most complete implementation of that pattern available to individual developers — and it runs on your MacBook.
 
 ## The Architecture
 
-QMD's pipeline is worth studying:
+The pipeline is the thing. This isn't grep wrapped in a vector store. It's a multi-stage retrieval system with custom-trained models at each step.
 
 ```
 ┌─────────────────┐
@@ -91,31 +67,17 @@ QMD's pipeline is worth studying:
                   └─────────────────┘
 ```
 
-Several things stand out.
+A few things here are genuinely clever, not just competent.
 
-**Query expansion with a fine-tuned model.** QMD doesn't just run your query as-is. It expands it with related terms using a custom 1.7B parameter model trained specifically for this task. The original query gets 2x weight so exact matches aren't drowned out by expansions.
+**Query expansion with a fine-tuned 1.7B model.** QMD doesn't search your exact query — it expands it first with related terms using a model trained specifically for this task. The original query gets 2x weight to prevent exact matches from being diluted by expansions. Most tools skip this step entirely. Tobi's tool has a custom-trained model for it.
 
-**Parallel BM25 and vector retrieval.** Standard hybrid approach, but the execution is smart. BM25 uses SQLite's FTS5 for fast keyword matching. Vector search uses a small embedding model (300MB). Both run locally, both are fast.
+**Position-aware blending after RRF fusion.** Standard Reciprocal Rank Fusion can dilute high-confidence exact matches when expanded queries return noisy results. QMD applies top-rank bonuses (+0.05 for rank 1, +0.02 for ranks 2-3) so that if both retrieval methods are confident about a result, it stays confident after fusion. This is the kind of detail that matters in production but gets skipped in prototypes.
 
-**Position-aware blending after fusion.** This is the clever bit. Pure RRF can dilute exact matches when expanded queries miss them. QMD adds top-rank bonuses: +0.05 for rank 1, +0.02 for ranks 2-3. High-confidence results from either method stay high-confidence after fusion.
-
-**LLM re-ranking with logprobs.** The final stage uses a 640MB re-ranker model that outputs Yes/No relevance scores with probability values. This catches cases where both retrieval methods ranked something highly but it's actually off-topic.
-
-## Why Local-First Matters
-
-There's a reason this runs entirely on-device.
-
-Privacy is obvious. Your documents, your notes, your code never leaves your machine. For personal knowledge bases, work documentation, or anything sensitive, this isn't just nice-to-have.
-
-Latency is underrated. Network round-trips add up. When your agent is doing iterative search, even 100ms per request compounds into noticeable delays. Local search is basically instant.
-
-Cost is real. Embedding APIs charge per token. If you're searching frequently across a large corpus, those costs accumulate. Local models have zero marginal cost after the initial download.
-
-Offline capability exists. Sounds trivial until you're on a plane or somewhere with bad connectivity and need to search your notes.
+**LLM re-ranking with logprobs.** The final stage uses a 640MB re-ranker that scores Yes/No relevance with probability values — not just binary classification. You get calibrated confidence, not a coin flip. Cohere's benchmarks show re-ranking adds 39% improvement on average. Tobi included it.
 
 ## The Model Stack
 
-QMD runs three small models:
+Three small models, all running locally:
 
 | Model | Size | Purpose |
 |-------|------|---------|
@@ -123,7 +85,7 @@ QMD runs three small models:
 | qwen3-reranker-0.6b | ~640MB | Relevance re-ranking |
 | qmd-query-expansion-1.7B | ~1.1GB | Query expansion |
 
-Total: roughly 2GB on disk. These run via node-llama-cpp with GGUF quantization, so they work on consumer hardware without a dedicated GPU. Not blazing fast on a MacBook Air, but usable.
+Total: roughly 2GB. They run via node-llama-cpp with GGUF quantization — consumer hardware, no GPU required. Not instant on a MacBook Air, but fast enough that it doesn't break the agent loop.
 
 ## MCP Integration
 
@@ -137,38 +99,28 @@ QMD exposes five tools through the Model Context Protocol:
 | `qmd_get` | Retrieve document by path |
 | `qmd_multi_get` | Retrieve multiple documents |
 
-This means Claude Desktop, Claude Code, or any MCP-compatible agent can use QMD natively. Point it at your notes directory, your documentation, your local knowledge base. The agent now has smart search over your content.
+Claude Desktop, Claude Code, or any MCP-compatible agent gets smart search over your local content natively. The separation of tools is thoughtful — sometimes an agent needs exact keyword lookup, sometimes semantic, sometimes the full pipeline. Having all three lets the model choose based on query type rather than being forced through an expensive path every time.
 
-The separation of tools is thoughtful. Sometimes you want fast keyword lookup. Sometimes you want semantic search. Sometimes you want the full pipeline. Having all three lets the agent choose appropriately based on the query type.
+## Why Local-First
 
-## What This Represents
+The obvious reason is privacy: your notes, your code, your documents never leave the machine. For anything sensitive, that's not optional.
 
-QMD isn't just a search tool. It's a statement about where AI infrastructure is heading.
+The less obvious reason is latency. When an agent is doing iterative retrieval — searching, reading results, refining, searching again — network round-trips compound. Local search is effectively instant. At 10 search iterations per task, even 100ms of network latency per call is a full second of unnecessary waiting.
 
-**Local-first tools are proliferating.** osgrep, mgrep, now QMD. The pattern is clear: serious users want on-device semantic search that doesn't require cloud services.
+Cost compounds too. Embedding APIs charge per token. At any meaningful scale of queries over a large corpus, the marginal cost of cloud embeddings adds up in a way that zero marginal cost local models don't.
 
-**Hybrid search is becoming standard.** Pure keyword or pure vector isn't enough. The 15-30% accuracy improvement from combining them is too significant to ignore.
+## What It Says
 
-**MCP is the integration layer.** Tools designed for AI agents export MCP interfaces. This is the emerging standard for how agents access external capabilities.
+Here's what I keep coming back to: Tobi Lütke had no reason to build this.
 
-**Small models are surprisingly capable.** A 640MB re-ranker and 300MB embedding model, running locally, get you most of the quality of much larger cloud models. The gap keeps shrinking.
+Not in the sense that it wasn't a good idea — clearly it was, 4.4k stars suggests the market agrees. But in the sense that he had every reason not to. He's a CEO with a full-time job that is considerably more demanding than "build open source search tooling for developers." The opportunity cost of his time is astronomical. There are teams of people who are literally paid to solve this problem.
 
-## Should You Use It?
+And yet what those teams shipped — most of it, anyway — is coarser than what Tobi built on the side. The agentic grep loops that burn tokens. The pure vector implementations that miss exact matches. The "just expand the context window" non-solution. The RAG pipelines with no re-ranking, no query expansion, no position-aware fusion.
 
-If you use Claude Desktop or any MCP-compatible agent and have a significant local knowledge base, QMD is worth trying. The setup is straightforward: install, point at your directories, add the MCP configuration.
+QMD has all of it. Shipped and open-sourced.
 
-If you're building your own AI application with search needs, QMD's architecture is worth studying even if you don't use it directly. The query expansion, position-aware blending, and multi-stage pipeline represent current best practices.
+The most charitable read is that Tobi is genuinely a technical CEO who scratches his own itches and happens to be very good at it. The less charitable read is that the AI infrastructure space has failed to make this kind of sophisticated retrieval accessible, and a billionaire had to fill the gap himself.
 
-If you're just doing occasional searches on a small document set, the 2GB model download might be overkill. Simple grep or a basic semantic search tool would suffice.
+Both reads are probably right. And both should push engineers who are building in this space to ask whether they're actually solving the problem or just shipping something that looks like a solution.
 
-## The Bigger Picture
-
-The search infrastructure for AI agents is still immature. Most agents use naive approaches: grep everything, stuff it into context, hope for the best. This burns tokens and misses relevant information.
-
-QMD shows what thoughtful search infrastructure looks like. Hybrid retrieval. Query expansion. Re-ranking. Position-aware fusion. Running locally with small models.
-
-These techniques aren't new. Enterprise search systems have used them for years. What's new is packaging them for individual use, for AI agents, running on consumer hardware.
-
-The agents that ship quality work will be the ones with quality search. Finding the right context is as important as what the model does with it. QMD is one answer to that problem, and it's a good one.
-
-Tobi built this because he needed it. That's usually how the best tools start.
+Tobi built this because he needed it. That's usually how the best tools start. It's less usual when the builder is running a $100B company and still found the time to do it right.

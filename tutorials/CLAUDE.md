@@ -89,11 +89,11 @@ tutorials/
 ## Naming Convention
 
 ```
-guides/{YYYY}-{MM}-{slug}.md
+guides/YYYYMMDD-{slug}.md
 
 Examples:
-2026-03-deploy-fastify-to-cloud-run.md
-2026-03-youtube-transcript-pipeline.md
+20260307-youtube-pipeline-setup.md
+20260126-agent-browser-claude-code-setup.md
 ```
 
 ---
