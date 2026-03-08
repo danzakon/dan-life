@@ -31,4 +31,13 @@ Status flow: `queued` -> `scheduled` (picked up by Cowork daily task) -> `posted
 
 ## Queued Posts
 
-_No posts queued yet. Use the content-pipeline skill to generate and queue posts._
+### [ ] Your Coding Agent Should Be a Master of Your Stack, Not a Generalist
+
+**Content ID:** 20260131-AD-001
+**Target date:** 2026-03-08
+**Platform:** blog
+**Priority:** normal
+**Type:** article
+**File:** content/articles/queued/2026-01-background-agents-who-ships-code.md
+
+**Status:** queued

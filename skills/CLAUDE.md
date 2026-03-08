@@ -259,7 +259,7 @@ content/
 ├── raw/              ← Source material (x-posts/, youtube/, web/)
 ├── briefs/           ← Work items (YYYYMMDD-SRC-NNN.md)
 ├── posts/            ← Weekly post drafts (YYYY-W{NN}.md)
-└── articles/         ← Long-form (drafts/ + published/)
+└── articles/         ← Long-form (drafts/ + queued/ + published/)
 
 research/reports/     ← Research output
 tutorials/guides/     ← Technical guide output

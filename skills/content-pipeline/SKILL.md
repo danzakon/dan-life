@@ -689,8 +689,17 @@ For each refined item:
 
 2. **Assign target date:** Spread across upcoming days, respecting cadence from `strategy.md` (default: multiple posts/day).
 
-3. **Write to `content/pipeline/queue.md`:**
+3. **Move article files (articles only):** If the item's format is `article` or `post+article` or `full-tree` and the item has a draft file in `content/articles/drafts/`, move it to `content/articles/queued/`:
 
+   ```bash
+   mv content/articles/drafts/{filename}.md content/articles/queued/{filename}.md
+   ```
+
+   Update the brief's `## Draft` path to reflect the new location. For non-article items (posts, threads), skip this step.
+
+4. **Write to `content/pipeline/queue.md`:**
+
+   For posts/threads:
    ```markdown
    ### [ ] {Hook/Title}
 
@@ -708,9 +717,25 @@ For each refined item:
    **Status:** queued
    ```
 
-4. **Update index.db:** `status = 'queued'`
+   For articles:
+   ```markdown
+   ### [ ] {Title}
 
-5. Report what was queued and when.
+   **Content ID:** {ID}
+   **Target date:** YYYY-MM-DD
+   **Platform:** {blog | x-article}
+   **Priority:** normal
+   **Type:** article
+   **File:** content/articles/queued/{filename}.md
+
+   **Status:** queued
+   ```
+
+5. **Update index.db:** `status = 'queued'`
+
+6. Report what was queued and when.
+
+**On publish:** When an article is marked as published (added to `history.md`), move the file from `content/articles/queued/` to `content/articles/published/` and update `published_date` in the frontmatter.
 
 #### After each item
 

@@ -39,8 +39,9 @@ content/
 ├── posts/                 # SHORT-FORM DRAFTS (weekly files)
 │   └── YYYY-W{NN}.md
 ├── articles/
-│   ├── drafts/
-│   └── published/
+│   ├── drafts/       # status: draft — actively being written
+│   ├── queued/       # status: ready — approved, waiting to publish
+│   └── published/    # status: published — live
 └── images/
     ├── prompts/
     └── {slug}-og.png

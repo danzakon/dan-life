@@ -1,15 +1,15 @@
 ---
 title: Your Coding Agent Should Be a Master of Your Stack, Not a Generalist
 content-id: 20260131-AD-001
-status: draft
+status: ready
 platform: blog
 ---
 
 # Your Coding Agent Should Be a Master of Your Stack, Not a Generalist
 
-Ramp quietly dropped a blog post that most people will misread. The headline stat is that 30% of their merged PRs come from an AI agent. The tech press will focus on that number. They'll miss the more important insight buried in the details.
+Ramp quietly dropped [a blog post](https://builders.ramp.com/post/why-we-built-our-background-agent) that most people will misread. The headline stat is that 30% of their merged PRs come from an AI agent. The tech press will focus on that number. They'll miss the more important insight buried in the details.
 
-Ramp built their own agent. Not from scratch, but customized deeply for their specific codebase. And that decision reveals where this whole space is heading.
+Rather than using existing background agent setups provided by Cursor, OpenAI, or Anthropic, Ramp built their own agent. Not from scratch, but customized deeply for their specific codebase. And that decision reveals where this whole space is heading.
 
 ## The Line That Matters
 
@@ -53,22 +53,11 @@ This is infrastructure that exists to make specialization possible. The agent co
 
 Here's the prediction I'm confident about: every company with more than 50 engineers will either build something like this or fall behind.
 
-The ROI math is straightforward. If your agent is 20% more effective because it understands your systems deeply, and you have 100 engineers, that's 20 engineer-equivalents of productivity. At that scale, investing in custom agent infrastructure pays for itself quickly.
+The ROI math is clear. If your agent is 20% more effective because it understands your systems deeply, and you have 100 engineers, that's 20 engineer-equivalents of productivity. At that scale, investing in custom agent infrastructure pays for itself quickly.
 
 Google will build this. Meta will build this. Stripe, Shopify, Airbnb. Any company with meaningful scale and a differentiated codebase will conclude that general-purpose agents leave value on the table.
 
-The question for smaller companies is where to draw the line. You probably can't justify Ramp's full infrastructure investment. But you can move along the spectrum.
-
-```
-Zero Config                                              Full Custom
-    |                                                          |
-    |     Copilot       Cursor + MCP      Ramp Inspect        |
-    |   (out of box)    (some custom)    (deep custom)        |
-    |                                                          |
-    └──────────────────────────────────────────────────────────┘
-         Lower investment                    Higher investment
-         Lower ceiling                       Higher ceiling
-```
+The question for smaller companies is where to draw the line. You probably can't justify Ramp's full infrastructure investment. But there's a spectrum here, and most teams are sitting further toward the zero-config end than they should be. Out-of-the-box Copilot is one end. Ramp's fully custom Inspect is the other. In between is a lot of useful territory: adding MCP servers, writing rules files, feeding your agent documentation about your architecture. Each layer of investment raises the ceiling.
 
 Most teams should be somewhere in the middle. Use a general-purpose agent as the foundation. Add MCP servers that connect to your systems. Write rules files that encode your conventions. Feed it documentation about your architecture. Each layer of customization makes the agent more native to your environment.
 
@@ -92,20 +81,12 @@ That ceiling exists because general-purpose agents optimize for the average code
 
 Ramp's 30% number isn't impressive because of the percentage. It's impressive because those PRs presumably need less human correction, follow existing patterns more closely, and integrate with internal systems correctly. The agent isn't just generating code. It's generating code that fits.
 
-That's the difference between an agent that can help and an agent that actually ships.
+That's the difference between an agent that can help and an agent that actually ships on its own.
 
 ## Where This Goes
 
-The current generation of coding agents will look primitive in two years. Not because the models will be dramatically smarter, though they will be. Because the integration patterns will mature.
+The generalist agent era is ending and the specialist agent era is beginning. The companies that recognize this shift will ship faster than their competition, have compounding advantages, better internal tooling, more institutional knowledge, engineers who understand how to think about agent-assisted development.
 
-Today, customizing an agent for your codebase requires real engineering effort. Standing up MCP servers, writing rules, maintaining context. Tomorrow, this will be productized. You'll point a tool at your repo, your Jira, your Sentry, your CI system, and it'll build the integration layer automatically.
+Most companies are figuring out how to roll out the off-the-shelf solutions to their workforce, so there's a clear edge here beyond just "using coding agents."
 
-When that happens, the companies that invested early in understanding how to specialize their agents will have a head start. They'll know what integrations matter. They'll have learned what context makes agents effective. They'll have developed intuitions that new adopters will need to build from scratch.
-
-Ramp is early to this. They're figuring out what works through direct investment. Most companies are waiting for off-the-shelf solutions.
-
-Both strategies can work. But the early movers will have compounding advantages, better internal tooling, more institutional knowledge, engineers who understand how to think about agent-assisted development.
-
-The generalist agent era is ending. The specialist agent era is beginning. The companies that recognize this shift will pull ahead. The ones that keep waiting for general-purpose tools to magically understand their codebase will keep wondering why the productivity gains plateau.
-
-Your agent should be a master of your stack. That's the insight. Everything else follows from there.
+It's on you to make your agents masters of your stack.
