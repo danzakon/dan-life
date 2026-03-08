@@ -30,6 +30,17 @@ research/
 
 Save all intermediate work to `.scratchpad/`. Only finished, synthesis-complete reports go into `reports/`.
 
+### File Naming Convention
+
+All files use a `YYYYMMDD` date prefix for chronological sorting:
+
+```
+reports/{YYYYMMDD}-{slug}.md           # e.g. 20260308-agentic-sdlc-leverage.md
+.scratchpad/{YYYYMMDD}-{slug}.md       # e.g. 20260308-mobile-agent-ui-findings.md
+```
+
+This matches the date-prefix convention used across the content pipeline. Never omit the date prefix.
+
 ---
 
 ## What Belongs Here
@@ -230,7 +241,7 @@ Increment NNN (start at 001 if no results). Add the `id` to the report's YAML fr
 sqlite3 content/pipeline/index.db \
   "INSERT INTO items (id, created_at, source_type, ingest_source, status, current_title, raw_file)
    VALUES ('{ID}', '{datetime}', 'research', 'research', 'raw',
-           '{report title}', 'research/reports/{filename}');"
+           '{report title}', 'research/reports/{YYYYMMDD}-{slug}.md');"
 ```
 
 ### Step 3: Write inbox entry
@@ -251,7 +262,7 @@ Add a row to the Item Registry in `content/inbox/_index.md`.
 ### Step 5: Notify
 
 ```
-Research report saved: research/reports/{filename}
+Research report saved: research/reports/{YYYYMMDD}-{slug}.md
 Registered in pipeline as {ID}.
 Ready for /content-interview to convert to content.
 ```

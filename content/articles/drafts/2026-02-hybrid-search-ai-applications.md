@@ -7,11 +7,11 @@ platform: blog
 
 # How the Best AI Tools Are Solving Search (And What You Can Learn From Them)
 
-The most interesting technical battle in AI tooling right now isn't about model capabilities. It's about search.
+Bigger context windows were supposed to make retrieval a solved problem. They didn't. And neither did RAG. Or grep.
 
-Every coding assistant, every RAG application, every AI agent that works with documents faces the same problem: finding the right context to feed the model. The approaches vary wildly. Some tools grep their way through codebases. Others build vector databases. The best ones are doing something more sophisticated.
+The real question isn't how much context you can stuff into a model — it's which 10,000 tokens you pick out of millions. Every leading AI tool has a different answer, and the gap between approaches is 15-48% accuracy on retrieval benchmarks. That's not a rounding error.
 
-I've been digging into how the leading AI tools handle retrieval, and the landscape is more fragmented than you'd expect. There's no consensus. There are tradeoffs. And what each company chose reveals something about where they think the leverage is.
+Here's where the market actually landed.
 
 ## The Current Landscape
 
