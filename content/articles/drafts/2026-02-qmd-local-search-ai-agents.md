@@ -15,11 +15,11 @@ Let that sit.
 
 There are entire companies whose sole focus is search infrastructure for AI. There are teams of engineers at every major AI lab thinking about retrieval. Millions of developers have bumped into this exact problem — how do you find the right context to feed a model without burning tokens or missing what matters? — and most of them reached for grep, stuffed embeddings into Pinecone, or gave up and expanded the context window.
 
-Tobi Lütke built QMD, open-sourced it, and 4.4k GitHub stars later it's quietly become the most thoughtful implementation of this pattern available to individual developers. Not "pretty good for a side project." Just good. Full stop.
+Tobi Lütke built QMD, open-sourced it, and 4.4k GitHub stars later it's quietly become the most thoughtful implementation of this pattern available to individual developers. Not "pretty good for a side project." Just good, full stop.
 
 ## What QMD Is
 
-QMD (Quick Markdown Search) is a local-first hybrid search engine with MCP integration, designed to give AI agents sophisticated retrieval over your local documents and code. No cloud APIs. No per-query costs. No data leaving your machine.
+QMD (Quick Markdown Search) is a local-first hybrid search engine with MCP integration, designed to give AI agents sophisticated retrieval over your local documents and code. No cloud APIs, per-query costs, or data leaving your machine.
 
 If you've read about the [hybrid search landscape for AI tools](https://danzakon.com/articles/hybrid-search), QMD is the most complete implementation of that pattern available to individual developers — and it runs on your MacBook.
 

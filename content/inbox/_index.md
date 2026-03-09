@@ -17,6 +17,7 @@ The `index.db` SQLite database is the authoritative source — this file mirrors
 | 2026-02-28 | 2 | 2 | reviewed |
 | 2026-03-07 | 16 | 0 | unreviewed |
 | 2026-03-08 | 16 | 0 | unreviewed |
+| 2026-03-09 | 3 | 0 | unreviewed |
 
 ---
 
@@ -63,3 +64,6 @@ The `index.db` SQLite database is the authoritative source — this file mirrors
 | 20260308-AD-013 | 2026-03-08 | research | content-pipeline | The metric that matters for AI coding isn't speed | approved |
 | 20260308-AD-014 | 2026-03-08 | research | content-pipeline | If it's not in the repo, agents can't see it | approved |
 | 20260308-AD-015 | 2026-03-08 | research | content-pipeline | Comparing agent memory: Letta vs Mem0 vs Zep | approved |
+| 20260309-RS-001 | 2026-03-09 | research | research | The MCP Token Tax: CLI vs MCP Token Economics | raw |
+| 20260309-RS-003 | 2026-03-09 | research | research | MCP vs CLI for AI Agents: The Enterprise Case That CLI Purists Keep Ignoring | raw |
+| 20260309-RS-004 | 2026-03-09 | research | research | The CLI Advantage: Why AI Models Are Fluent in Shell but Fumble MCP | raw |
