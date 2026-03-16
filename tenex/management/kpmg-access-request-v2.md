@@ -5,13 +5,7 @@
 **Date:** 3-15-26
 **Contact:** Dan Zakon (dan@tenex.co)
 
----
-
-## Context
-
-We're building an AI-native financial intelligence platform (referred to as "PESCALE" in the kickoff discussions) with a CFO agent that ingests data from Rillet (ERP) and Stuut (AR automation), provides automated 13-week cash flow forecasting, surfaces financial variances and stressors, and enables natural-language Q&A over financial data with high accuracy requirements. This document expands the original access request to be liberal and forward-looking, per the guidance from the KPMG infrastructure team.
-
-**Team size:** 4-6 developers
+All tools and licenses provisioned for this engagement would be used exclusively for KPMG project work.
 
 ---
 
@@ -21,8 +15,12 @@ We're building an AI-native financial intelligence platform (referred to as "PES
 |------|---------|
 | **GitHub Organization** | Client-provided GitHub org with all 5 developers as members. Our tooling, AI workflows, and CI/CD are built around GitHub. |
 | **GitHub Actions** | CI/CD runners enabled with sufficient minutes for automated testing, builds, and deployments. |
-| **Claude Code licenses** | 5 seats. Direct Anthropic product, our primary AI coding tool. Dramatically accelerates delivery. |
-| **Cursor licenses** | 5 seats. Secondary AI coding tool, AI-assisted IDE with multi-model support. |
+| **Claude Code licenses** | 5 seats on the **Max plan** ($200/seat/mo). This is Anthropic's highest-usage individual tier with the most generous limits, which is critical since Claude Code is our primary AI coding tool and the team uses it heavily throughout the day. Alternatively, Anthropic offers a **Team plan** ($30/seat/mo) or **Enterprise plan** (custom pricing) with centralized billing and admin controls if KPMG prefers a managed/org-level plan. |
+| **Cursor licenses** | 5 seats on the **Ultra plan** ($200/seat/mo). Cursor's highest tier, designed for full-time AI-native development with maximum usage. Alternatively, Cursor offers a **Business plan** ($40/seat/mo) or **Enterprise plan** (custom pricing) with SSO, admin controls, and org-wide usage analytics. |
+
+### Dedicated Devices (Optional)
+
+Given the sensitivity of financial data in this engagement, we're open to working on KPMG-provisioned laptops dedicated to this project if that aligns with your security posture. This would ensure complete separation between KPMG work and other client environments. Not a hard requirement on our end, but we want to flag it as an option given the enterprise context.
 
 ---
 
