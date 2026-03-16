@@ -20,7 +20,7 @@ All tools and licenses provisioned for this engagement would be used exclusively
 
 ### Dedicated Devices (Optional)
 
-Given the sensitivity of financial data in this engagement, we're open to working on KPMG-provisioned laptops dedicated to this project if that aligns with your security posture. This would ensure complete separation between KPMG work and other client environments. Not a hard requirement on our end, but we want to flag it as an option given the enterprise context.
+Given the sensitivity of financial data in this engagement, we're open to working on KPMG-provisioned laptops dedicated to this project if that aligns with your security posture. Not a hard requirement on our end, but we want to flag it as an option given the enterprise context.
 
 ---
 
