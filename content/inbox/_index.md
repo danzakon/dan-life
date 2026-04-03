@@ -18,6 +18,7 @@ The `index.db` SQLite database is the authoritative source — this file mirrors
 | 2026-03-07 | 16 | 0 | unreviewed |
 | 2026-03-08 | 16 | 0 | unreviewed |
 | 2026-03-09 | 3 | 0 | unreviewed |
+| 2026-04-03 | 1 | 0 | unreviewed |
 
 ---
 
@@ -67,3 +68,4 @@ The `index.db` SQLite database is the authoritative source — this file mirrors
 | 20260309-RS-001 | 2026-03-09 | research | research | The MCP Token Tax: CLI vs MCP Token Economics | raw |
 | 20260309-RS-003 | 2026-03-09 | research | research | MCP vs CLI for AI Agents: The Enterprise Case That CLI Purists Keep Ignoring | raw |
 | 20260309-RS-004 | 2026-03-09 | research | research | The CLI Advantage: Why AI Models Are Fluent in Shell but Fumble MCP | raw |
+| 20260403-RS-001 | 2026-04-03 | research | research | The One-Person Billion-Dollar Company: Medvi Playbook and Opportunities | raw |
