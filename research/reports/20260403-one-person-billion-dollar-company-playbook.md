@@ -422,6 +422,25 @@ The common thread across every Tier 1 opportunity: **infrastructure-as-a-service
 └────────────────────────────────────────────────────────────────┘
 ```
 
+### Beyond Healthcare: Infrastructure Platforms by Industry
+
+A separate research thread mapped infrastructure-as-a-service platforms across 9 industries. The most surprising finding: **embedded insurance and banking-as-a-service are more mature than healthcare infrastructure** and may offer even better opportunities for thin operators.
+
+| Industry | Key Platforms | What They Provide | Margin for Operator |
+|----------|--------------|-------------------|---------------------|
+| Insurance | Boost, Cover Genius, bolttech | Turnkey insurance products via API, no license needed | 15-25% of GWP |
+| Banking | Unit, Column, Stripe Treasury | Full banking stack (accounts, cards, lending) | Interchange + interest + fees |
+| Supplements/CPG | Prime Labs, Supliful | No-MOQ manufacturing, white-label, fulfillment | 60-80% gross |
+| Education | White-label LMS + accredited partners | Course delivery, credentialing, certificates | 70-90% |
+| Cannabis | WebJoint | License-free white-label delivery | 30-50% |
+| Energy | Mothership | White-label retail electricity (Texas) | 10-20% |
+| Legal | LawVo, FileForms API | Attorney oversight, document automation | 40-60% |
+| Real Estate | Spruce, Qualia | Title, escrow, closing infrastructure | Variable |
+
+The **stacking opportunity** is powerful: a niche brand serving, say, content creators could combine business formation (legal infra) + business banking (BaaS) + business insurance (embedded insurance) + tax prep (CPA network) into a single relationship. Each layer adds revenue per customer while the AI handles all coordination.
+
+Full analysis: [Infrastructure-as-a-Service: Thin Operator Playbook](20260403-infrastructure-as-a-service-thin-operator-playbook.md)
+
 The pattern across all winners: **AI replaces the operations layer** (intake, forms, coordination, communication) while **licensed professionals provide the trust layer** (attorney signature, doctor prescription, CPA sign-off). The solo operator builds the machine connecting confused customers to licensed professionals through AI-powered workflows.
 
 ---
@@ -521,3 +540,4 @@ The best opportunities for a solo AI operator share six traits:
 - [Proven Demand Markets: Next Wave](20260403-proven-demand-markets-next-wave.md)
 - [AI Leverage: Small Teams, Non-Tech](20260403-ai-leverage-small-teams-non-tech.md)
 - [AI Operator: High-Growth Industries](20260403-ai-operator-high-growth-industries.md)
+- [Infrastructure-as-a-Service: Thin Operator Playbook](20260403-infrastructure-as-a-service-thin-operator-playbook.md)
