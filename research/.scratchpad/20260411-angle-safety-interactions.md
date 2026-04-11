@@ -1,27 +1,45 @@
-# Nutrafol: Safety, Interactions, Monitoring
+# Nutrafol Safety Profile and Interactions
 
-**Category:** Technical  
-**Date Started:** 2026-04-11  
+**Category:** Health Research
+**Date Started:** 2026-04-11
 **Status:** [x] Complete
 
 ---
 
 ## Summary
-
-No widely accepted **major** pharmacokinetic interaction between Nutrafol and minoxidil or finasteride appears in standard drug-interaction references, but botanicals add **incremental bleeding risk theory** (saw palmetto), **high-dose biotin lab interference**, **fish/shellfish allergy** (marine collagen), and **rare hepatotoxicity case reports** for ashwagandha. Stacking weak botanical antiandrogens on topical finasteride is unlikely to match oral finasteride systemic effects but is not “zero hormone interaction” for sensitive individuals.
+Nutrafol is generally well-tolerated but carries specific risks: ashwagandha liver injury (rare but serious, NIH LiverTox Score B), biotin lab test interference (FDA-warned), and additive DHT suppression with topical finasteride.
 
 ## Key Findings
 
-- Saw palmetto: antiplatelet concern — caution with warfarin/heparin/strong anticoagulants per [popular clinical summaries](https://www.hims.com/blog/nutrafol-vs-finasteride).
-- Biotin in hair supplements can skew **thyroid panels, troponin, and other immunoassays** — tell clinicians before bloodwork ([dermatologist-facing commentary](https://www.theamaranthinecollective.com/blog/nutrafol-a-dermatologists-take-on-the-pros-and-cons), [UK pharmacy guide](https://www.boltpharmacy.co.uk/guide/can-nutrafol-cause-hair-loss)).
-- Finasteride: no major listed interactions; avoid **additional 5AR inhibitors like dutasteride** ([Hims dermatology review](https://www.hims.com/blog/finasteride-drug-interactions)); saw palmetto is a mild partial pathway overlap, not equivalent.
+### DHT Stacking Risk
+- Both saw palmetto and topical finasteride target 5-alpha reductase
+- GoodRx pharmacists: "best to avoid combining saw palmetto with finasteride"
+- Risk lower with topical vs oral finasteride, but not zero
+- Unknown saw palmetto dose in proprietary blend complicates assessment
+
+### Ashwagandha Liver Injury
+- NIH LiverTox: Likelihood Score B ("likely cause of liver injury"), Dec 2024
+- 23+ published case reports
+- One case directly implicating Nutrafol in 26-year-old woman (Am J Gastroenterol, Oct 2024)
+- 3 deaths in patients with pre-existing liver disease (Indian case series, 2023)
+
+### Biotin Lab Interference
+- FDA safety communication: biotin causes incorrect results on thyroid panels, troponin, PSA, and more
+- Can mimic Graves' disease (falsely low TSH, elevated fT4)
+- Must stop 48-72 hours before blood work
+
+### PSA Testing
+- CAMUS RCT (369 men): saw palmetto does NOT affect PSA even at 3x dose
+
+### Long-Term Safety Gap
+- Longest study: 12 months; most are 6 months
+- No published multi-year data despite product available since 2016
 
 ## Sources
-
-- https://www.hims.com/blog/nutrafol-vs-finasteride
-- https://www.hims.com/blog/finasteride-drug-interactions
-- https://www.boltpharmacy.co.uk/guide/can-nutrafol-cause-hair-loss
+- https://www.ncbi.nlm.nih.gov/books/NBK548536/
+- https://journals.lww.com/ajg/fulltext/2024/10001/s4240_nutrafol_s_hair_gains_and_liver_strains.4241.aspx
+- https://www.fda.gov/medical-devices/in-vitro-diagnostics/biotin-interference-troponin-lab-tests
+- https://ncbi.nlm.nih.gov/pmc/articles/PMC3979451/
 
 ## Next Steps
-
-- [x] Merged into `research/reports/20260411-nutrafol-vs-aggressive-hair-loss-stack.md`
+- [x] Merged into final report
