@@ -77,23 +77,67 @@ Principle of Least Privilege (PoLP)
               └─► Zero Trust Architecture (NIST SP 800-207) — every request re-evaluated
 ```
 
+Plain definitions:
+
+- **Principle of Least Privilege (PoLP).** Grant a user (or agent) the minimum permissions needed to do their job — nothing more. If a marketing analyst only needs to read three Salesforce reports, they should not have write access to the customer database. The oldest and most foundational rule in access control, articulated by Saltzer and Schroeder in 1975.
+
+- **Zero Standing Privilege (ZSP).** A stricter version of PoLP that says: no one — not even admins — should *permanently* hold elevated permissions. Privileges only exist while they are actively being used. The reasoning: any standing privilege is a blast radius waiting to be exploited if the account is compromised.
+
+- **Just-in-Time access (JIT).** The mechanism that makes ZSP practical. Instead of carrying admin rights all the time, a user requests them when needed. The request is approved (automatically or by a human), permissions are granted for a short, time-bound session (CyberArk defaults to 4 hours), and then auto-revoked when the session ends or the work is done.
+
+- **Zero Trust Architecture (ZTA).** The umbrella security philosophy from [NIST SP 800-207](https://nvlpubs.nist.gov/nistpubs/specialpublications/NIST.SP.800-207.pdf): never grant implicit trust based on network location ("inside the corporate firewall"). Every request from any user, device, or service must be authenticated and authorized fresh, based on current identity, device posture, and context. The phrase "never trust, always verify" is the slogan.
+
+The progression: *don't grant more than needed* (PoLP) → *don't keep it standing* (ZSP) → *grant on demand* (JIT) → *re-verify every request* (Zero Trust).
+
 [NIST SP 800-53 AC-6](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final) codifies least privilege as a mandatory control for federal systems. The modern enterprise pattern (CyberArk, Teleport, ConductorOne, Opal) is JIT with 4-hour default sessions, automated approval, instant revocation.
 
-### 1.5 RBAC vs ABAC vs ReBAC vs PBAC vs ACL — the cheat sheet
+### 1.5 RBAC vs ABAC vs ReBAC vs PBAC vs ACL — the five access control models
+
+These five models are the universe of how systems decide "is this person allowed to do this thing?" Each one represents a different basis for the decision.
+
+- **ACL — Access Control List.** The oldest model. Each object (file, database row, document) carries a literal list saying which specific users or groups can do what. Unix file permissions are an ACL (`alice: read, bob: write, others: none`). Windows NTFS file permissions are an ACL. Works fine for small systems; falls apart at enterprise scale because the list size grows as users × objects, and there is no abstraction for "everyone on the marketing team."
+
+- **RBAC — Role-Based Access Control.** Adds *roles* as an indirection between users and permissions. Instead of granting Alice access to 47 specific objects, you grant Alice the "Marketing Manager" role, and the role itself carries the 47 permissions. Now when Bob joins marketing, you grant him one role instead of 47 individual grants. The model the rest of this report is largely about. Failure mode: "role explosion" — every contextual nuance (Marketing Manager in EU vs US vs APAC, with vs without budget approval authority) spawns a new role until there are 1,300 of them.
+
+- **ABAC — Attribute-Based Access Control.** Replaces "what role do you have?" with "what are the attributes of the user, the resource, the action, and the environment, and do they satisfy this predicate?" Example policy: `allow if user.department == resource.owner_department AND time.hour BETWEEN 9 AND 17 AND user.location.country == "US"`. Solves role explosion by encoding context as predicates rather than as new roles. Cost: policies become harder to read and audit, and the same policy logic ends up scattered across many systems if not centralized. Defined in [NIST SP 800-162](https://nvlpubs.nist.gov/nistpubs/specialpublications/NIST.SP.800-162.pdf).
+
+- **ReBAC — Relationship-Based Access Control.** Replaces predicates with *graph relationships*. The question is no longer "what role does Alice have?" but "what is the relationship between Alice and document X, and does that relationship grant edit access?" Example: "Alice can edit document X because Alice is a member of the engineering team, the engineering team owns the engineering folder, and document X lives in the engineering folder." This is how Google Drive, GitHub, and most modern collaboration tools actually work under the hood. The canonical implementation is [Google Zanzibar (USENIX ATC 2019)](https://www.usenix.org/system/files/atc19-pang.pdf) — see below.
+
+- **PBAC — Policy-Based Access Control.** Orthogonal to the others. PBAC is about *where the policy lives and how it is governed*: instead of access logic being scattered across application code, it lives as a versioned, reviewable artifact in a policy language (Rego for Open Policy Agent, Cedar for AWS, XACML historically). A central Policy Decision Point (PDP) evaluates the policy against each request. PBAC can encode RBAC, ABAC, or ReBAC inside it — it is about externalization, not the decision basis.
 
 | Model | Decision basis | Best for | Failure mode |
 |-------|---------------|----------|--------------|
 | **ACL** | Identity → object | Filesystems, small systems | O(users × objects) explosion |
 | **RBAC** | Role → permission | Stable job functions, coarse policy | Role explosion (1,300 roles at a 50k-employee EU bank — canonical NIST example) |
-| **ABAC** ([NIST SP 800-162](https://nvlpubs.nist.gov/nistpubs/specialpublications/NIST.SP.800-162.pdf)) | Attribute predicates (user, resource, env, action) | Context-dependent decisions (time, location, risk, classification) | Policy authoring complexity; scattered ABAC in code is unauditable |
-| **ReBAC** (Google Zanzibar, [USENIX ATC 2019](https://www.usenix.org/system/files/atc19-pang.pdf)) | Subject↔object graph traversal | Resource-level sharing (Drive, GitHub, Jira) | Recursive policies hard to audit |
+| **ABAC** | Attribute predicates (user, resource, env, action) | Context-dependent decisions (time, location, risk, classification) | Policy authoring complexity; scattered ABAC in code is unauditable |
+| **ReBAC** | Subject↔object graph traversal | Resource-level sharing (Drive, GitHub, Jira) | Recursive policies hard to audit |
 | **PBAC** | Externalized policy artifact (Rego, Cedar, XACML) | Governing the decision process itself | PDP becomes single point of failure |
 
-NIST explicitly notes that ACL and RBAC are special cases of ABAC. Practically, every mature B2B SaaS in 2026 runs **hybrid**: RBAC for coarse policy (admin/member), ReBAC for resource sharing, ABAC for contextual edge cases, PBAC as the control plane.
+NIST explicitly notes that ACL and RBAC are special cases of ABAC. Practically, every mature B2B SaaS in 2026 runs **hybrid**: RBAC for coarse policy (admin/member), ReBAC for resource sharing, ABAC for contextual edge cases, PBAC as the control plane that hosts whichever combination you use.
 
-Zanzibar is the technical paper to know. Models permissions as relation tuples `(object#relation@user)`, answers "Can Alice edit document X?" via graph traversal. Powers Drive, YouTube, Calendar, Photos, Cloud. Trillions of ACLs, millions of authz checks/sec, <10ms p95, >99.999% availability. External consistency via Spanner TrueTime; **zookies** solve the "new enemy problem" (preventing stale ACLs from being applied to new content); **Leopard** is the specialized index for nested group membership. OSS implementations: SpiceDB/AuthZed, OpenFGA, Permify, Ory Keto, Auth0 FGA, WorkOS FGA.
+**Google Zanzibar — the paper to know.** Google's internal authorization system, made public in a 2019 USENIX paper. Models all permissions as **relation tuples** of the form `(object#relation@user)` — for example, `(doc:readme#editor@alice)` means "Alice has the `editor` relation on `doc:readme`." Answering "Can Alice edit document X?" becomes a graph traversal over these tuples. Powers Drive, YouTube, Calendar, Photos, and Google Cloud. The numbers are absurd: trillions of stored relations, millions of authorization checks per second, p95 latency under 10ms, availability over 99.999%. Two key technical contributions: **zookies** (opaque consistency tokens that solve the "new enemy problem" — preventing stale, revoked permissions from being applied to newly created content) and **Leopard** (a specialized index for fast traversal of nested group memberships). Open-source implementations: SpiceDB/AuthZed, OpenFGA (sponsored by Auth0/Okta), Permify, Ory Keto, Auth0 FGA, WorkOS FGA.
 
-### 1.6 The identity protocol stack
+### 1.6 The identity protocol stack — what each protocol actually does
+
+A working enterprise identity system uses six or seven protocols in concert. Most practitioners conflate them. Here is what each one is for, in plain terms.
+
+- **LDAP — Lightweight Directory Access Protocol** (RFC 4511, 1993). LDAP is *not* an authentication protocol — it is a way to query and modify a directory of users, groups, and other organizational data. Think of it as a read/write API for a phone book. The classic enterprise pattern is to have an LDAP server (OpenLDAP, Active Directory's LDAP interface, etc.) holding all employee records, and applications look up users via LDAP. Authentication happens via a "simple bind" (try to log in as the user with their password) or by handing off to a real auth protocol like Kerberos.
+
+- **Kerberos** (RFC 4120, originally MIT 1980s, now ubiquitous in Windows networks). A network authentication protocol that uses tickets and a trusted third party (the Key Distribution Center) so that users prove their identity once and then receive time-limited tickets to access other services. The model: "Alice authenticates to the KDC, the KDC gives her a ticket-granting ticket, she uses that to request service tickets for the file server, mail server, etc." Active Directory is essentially Kerberos + LDAP + DNS + replication wrapped together. Mostly invisible inside corporate networks; rarely used in modern cloud SaaS.
+
+- **SAML 2.0 — Security Assertion Markup Language** (OASIS, 2005). An XML-based protocol for *federated single sign-on* in enterprise environments. The flow: you click "Sign in with corporate SSO" on a SaaS app (e.g. Salesforce), the SaaS app redirects you to your company's identity provider (Okta, Microsoft Entra, Ping), you authenticate there, and the IdP sends back a signed XML document (the SAML assertion) that says "this is Alice, here are her email and groups." The SaaS app trusts the signature and logs you in. SAML still dominates the Fortune 500 install base. Verbose, XML-heavy, mostly used for browser-based enterprise SSO.
+
+- **OAuth 2.0 — Open Authorization** (RFC 6749, 2012). A *delegated authorization* protocol — not authentication, despite being widely misused for login. The model: a user authorizes a client app to access an API on their behalf, the API issues an access token to the client, the client uses that token to call the API. The classic example: "Sign in with Google" to a third-party app — Google issues a token that lets the app read your Google Calendar, but the token does not log you into Google itself. The token is what the client holds and presents; the user does not see it. OAuth 2.0 was widely misused as a login mechanism, which led to OIDC.
+
+- **OAuth 2.1** ([draft-ietf-oauth-v2-1](https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/), in progress). A consolidation of OAuth 2.0 plus all the security best-practice updates from the past decade, with the worst patterns removed. Specific changes from 2.0: **PKCE** (Proof Key for Code Exchange — a way to bind an auth request to the specific client that started it, preventing interception attacks) is **mandatory** for the auth code flow; the **implicit grant** (which leaked tokens in URL fragments) is **removed**; the **Resource Owner Password Credentials grant** (which had the user hand their password to the client app) is **removed**; redirect URIs must match exactly as strings (not as patterns); bearer tokens cannot be sent in URL query strings; refresh tokens must be sender-constrained or single-use. Every credible agent-authentication proposal in 2026 sits on OAuth 2.1, not 2.0.
+
+- **OIDC — OpenID Connect** (OpenID Foundation, 2014). An *authentication* layer built on top of OAuth 2.0. Adds three things: an **ID Token** (a JWT — see below — that says "this user is Alice, authenticated at this time, by this IdP"), a `/userinfo` endpoint to fetch user profile data, and standard scopes (`openid`, `profile`, `email`). The result: OAuth 2.0 underneath lets a client get authorization to call APIs; OIDC on top lets the same flow also serve as login. Modern "Sign in with Google / Microsoft / Apple" is OIDC.
+
+- **SCIM — System for Cross-domain Identity Management** (RFCs 7643 and 7644). A REST API for managing the *lifecycle* of user accounts across systems — creating, updating, deactivating users and groups. When HR hires a new employee, the HR system sends a SCIM `POST /Users` to Slack, GitHub, Salesforce, and 50 other apps, and each one provisions the account automatically. When the employee is terminated, the same flow sends a `DELETE` or deactivation update everywhere. SCIM is the most underrated control in the stack — broken SCIM is why ex-employees retain access for weeks. **SCIM is not SSO.** SAML/OIDC log a user in at a given moment; SCIM is what creates and removes the account in the first place.
+
+- **JWT — JSON Web Token** (RFC 7519). A *token format*, not a protocol. A JWT is a JSON object with three parts (header, payload, signature) base64-encoded and joined with dots. The payload contains **claims** — facts about the subject like `sub` (subject), `iss` (issuer), `aud` (audience), `exp` (expiration), plus custom claims. The signature is cryptographic, so anyone with the issuer's public key can verify the JWT was not tampered with. JWTs are what OIDC ID tokens look like, what OAuth access tokens often look like (when not opaque), and what SPIFFE JWT-SVIDs are. When you see a long string like `eyJhbGciOiJIUzI1NiIs...` that's a JWT.
+
+- **SPIFFE — Secure Production Identity Framework For Everyone** (CNCF specification). The modern open standard for *workload identity* — giving cryptographically verifiable identities to services, containers, and (now) agents, rather than to humans. A SPIFFE ID is a URI like `spiffe://example.com/ns/staging/sa/payment-service`. Each workload presents an **SVID** (SPIFFE Verifiable Identity Document, available as either an X.509 certificate or a JWT) that proves its identity to other workloads. SPIRE is the reference implementation. SPIFFE is becoming the foundation under agent identity — workload identity federation lets a Kubernetes pod or a cloud function exchange its SPIFFE SVID for a short-lived cloud IAM credential, eliminating long-lived API keys.
 
 | Protocol | Layer | Purpose | Spec |
 |---------|-------|---------|------|
@@ -107,15 +151,19 @@ Zanzibar is the technical paper to know. Models permissions as relation tuples `
 | JWT | Token format | Signed/encrypted JSON claims | RFC 7519 |
 | SPIFFE | Workload identity | Platform-agnostic workload IDs | CNCF |
 
-The mistakes practitioners get wrong:
+The mistakes practitioners get wrong, restated:
 
-- **OAuth 2.0 is authorization, not authentication.** Using it to log users in was the misuse that motivated OIDC.
-- **SCIM ≠ SSO.** SAML/OIDC log a user in; SCIM creates/updates/deactivates the account. SCIM deprovisioning is the most underrated control in the stack.
-- **LDAP is not an auth protocol.** It's the directory; auth happens via simple bind or as the lookup behind Kerberos.
+- **OAuth 2.0 is authorization, not authentication.** Using it to log users in was the misuse that motivated OIDC. If you only have an OAuth access token, you know *the user authorized something*, not *who the user is*.
+- **SCIM ≠ SSO.** SAML/OIDC let a user log in to an app. SCIM creates the account in the app in the first place, and removes it when the user leaves. Most enterprises have working SAML and broken SCIM, which is why offboarding is the #1 access-control incident pattern.
+- **LDAP is not an auth protocol.** It is the directory; authentication happens via simple bind, or LDAP is used as the lookup behind Kerberos in Active Directory.
 
-OAuth 2.1 vs 2.0: PKCE mandatory for auth-code grant; implicit removed; ROPC removed; exact-string `redirect_uri` matching; no bearer tokens in URL query strings; refresh tokens must be sender-constrained or single-use. Every credible agent-auth proposal in 2026 sits on top of OAuth 2.1, not 2.0.
+### 1.7 SSO architecture — what actually happens when you click "Sign in with Okta"
 
-### 1.7 SSO architecture
+**SSO — Single Sign-On.** A pattern (not a protocol) where a user authenticates once with a central identity provider and then accesses many applications without re-entering credentials. Implemented via SAML or OIDC under the hood. The two roles to know:
+
+- **IdP — Identity Provider** (sometimes called **OP — OpenID Provider** in OIDC terminology). The system that owns the user directory and performs authentication. Okta, Microsoft Entra ID, Ping Identity, Google Workspace, Auth0. The IdP is where the user actually types their password (or scans a fingerprint, or taps a YubiKey).
+
+- **SP — Service Provider** (sometimes called **RP — Relying Party** in OIDC terminology). The application the user is trying to use — Salesforce, Slack, Notion, an internal app. The SP does not authenticate the user itself; it trusts the IdP's signed claim.
 
 ```
 ┌──────────┐   1. Request    ┌──────────┐
@@ -133,17 +181,65 @@ OAuth 2.1 vs 2.0: PKCE mandatory for auth-code grant; implicit removed; ROPC rem
                                   ▼   (password, MFA, biometric)
 ```
 
-IdP owns the directory and authenticates; SP trusts the IdP's signed claim and establishes a local session. SAML still dominates F500 install base; OIDC dominates new integrations (discovery, JWKS rotation, mobile-friendly via PKCE).
+The flow, step by step:
 
-### 1.8 IGA, PAM, CIEM, and workload identity in two paragraphs each
+1. **Request.** The user navigates to the SP (e.g. `salesforce.com`). The SP sees the user has no active session and needs to authenticate.
+2. **Redirect to IdP.** The SP redirects the user's browser to the configured IdP, including a request for an authentication assertion.
+3. **Authenticate.** The IdP shows its login UI, the user enters credentials (password + MFA, passkey, etc.), the IdP verifies them against its directory.
+4. **Assertion / ID Token.** The IdP redirects the user's browser back to the SP, carrying a cryptographically signed message: either a SAML assertion (XML) or an OIDC ID Token (JWT). The SP verifies the signature against the IdP's public key, reads the claims (who the user is, when they authenticated, what groups they're in), and establishes a local session.
 
-**IGA** (Identity Governance and Administration). Provisioning/deprovisioning, access requests, access certifications, entitlement management, role mining, SoD enforcement. Tied to HR joiner-mover-leaver events. Vendors: SailPoint, Saviynt, Omada, Oracle IGA, One Identity Manager. The 2025–2026 next-gen disruptors (Lumos, ConductorOne, Opal, Veza, Apono) attack the "18-month deployment" weakness of legacy IGA with SaaS-first, faster-time-to-value pitches.
+**Federation** is what happens when one organization's IdP trusts another organization's IdP — for example, a contractor at Acme can access Beta Corp's SaaS apps because Beta Corp's IdP federates to Acme's IdP. The mechanism is the same trust-by-signature model, just chained.
 
-**PAM** (Privileged Access Management). Vaults for high-blast-radius credentials (root, domain admin, DBA, AWS root). Session recording, JIT elevation, ZSP modes. CyberArk dominates regulated industries; BeyondTrust, Delinea are the second tier. Teleport, StrongDM, HashiCorp Boundary are the cloud-native disruptors — short-lived certificate-bound access, no standing credentials. CyberArk just sold to Palo Alto Networks for $25B in February 2026.
+Per-organization SSO configuration is what makes B2B SaaS scalable: each customer org has its own IdP connection, attribute mapping, and signing key inside the SP. This is exactly what WorkOS, Auth0, and Frontegg sell — turnkey "Enterprise SSO" so a B2B SaaS startup can support 200 different customer IdPs without writing 200 integrations.
 
-**CIEM** (Cloud Infrastructure Entitlement Management). Coined by Gartner in 2020. AWS IAM has roughly 17,000 distinct actions; effective permissions resolve six policy layers (identity, resource, permissions boundaries, SCPs, session policies, VPC endpoints). [Sysdig: 98% of granted cloud permissions are unused.](https://sysdig.com/solutions/permissions-entitlement-management) CIEM as a standalone category is now subsumed into CNAPP (Wiz, Tenable, CrowdStrike, Palo Alto).
+SAML still dominates the F500 install base (XML metadata exchange, ADFS, Shibboleth, Ping). OIDC dominates new integrations (discovery via `.well-known/openid-configuration`, JWKS-based key rotation, mobile-friendly with PKCE).
 
-**Workload / non-human identity.** [SPIFFE](https://spiffe.io/docs/latest/spiffe-specs/spiffe-id/) is the open spec: SPIFFE IDs (`spiffe://trust-domain/path`) and SVIDs (X.509 or JWT) verifiably identify workloads. SPIRE is the reference implementation. Cloud-native: AWS IRSA, GCP Workload Identity Federation, Azure Federated Identity Credentials — short-lived OIDC token exchange replacing long-lived service-account keys. This is the substrate the agent-identity drafts now sit on.
+### 1.8 The four layers built on top of SSO — IGA, PAM, CIEM, and workload identity
+
+SSO solves "let users log in." Real enterprises need four additional capability layers on top.
+
+**IGA — Identity Governance and Administration.** The "manage the lifecycle and prove compliance" layer. Gartner defines IGA as "the solution to manage the identity life cycle and govern access across on-premises and cloud environments." Core capabilities:
+
+- **Provisioning and deprovisioning.** Automated creation and removal of user accounts in connected systems, driven by HR events (hire, transfer, terminate — the "joiner-mover-leaver" or JML pattern). SCIM is the modern delivery mechanism; legacy systems still require ITSM tickets.
+- **Access requests.** A self-service catalog where users request additional entitlements ("I need access to the Salesforce reports for the EMEA region"), routed through an approval workflow, then provisioned.
+- **Access certifications.** Periodic reviews where managers attest that current entitlements are still justified. Required quarterly or annually by SOX, SOC 2, and ISO 27001.
+- **Entitlement management.** A catalog of granular permissions with descriptions, owners, and sensitivity ratings.
+- **Role management and role mining.** Discovering roles from existing access patterns and managing role lifecycle.
+- **SoD enforcement.** Detective and preventive controls for separation-of-duties violations.
+
+Vendors: SailPoint (the F500 default), Saviynt, Omada, Oracle IGA, IBM Verify Governance, One Identity Manager. The 2025–2026 next-gen disruptors (Lumos, ConductorOne, Opal, Veza, Apono) attack the "18-month deployment, multi-million dollar implementation" weakness of legacy IGA with SaaS-first, faster-time-to-value pitches.
+
+**PAM — Privileged Access Management.** The "control the high-blast-radius accounts" layer. Aimed at admin accounts where a compromise causes catastrophic damage: root on a Linux host, domain admin in Active Directory, the AWS root account, database administrators, break-glass emergency accounts. Core capabilities:
+
+- **Credential vault.** Tamper-proof storage with policy-based rotation. Credentials are never exposed to end users; the vault checks them in and out.
+- **Session isolation and recording.** A Privileged Session Manager proxies the admin session, records video and keystrokes for forensics, and prevents the user from ever seeing the raw credential.
+- **Just-in-time elevation.** Ephemeral creation of privileged sessions instead of permanent admin group membership. Hits the ZSP target.
+- **Discovery.** Find all privileged accounts, keys, and secrets across on-prem, cloud, and operational technology (OT/ICS).
+- **Threat detection.** Anomaly detection on session behavior.
+
+Vendors: CyberArk (dominates regulated industries; the F500 default), BeyondTrust, Delinea (Thycotic + Centrify). The cloud-native disruptors — Teleport, StrongDM, HashiCorp Boundary — replace the bastion-host model with short-lived certificate-bound access where there are no standing credentials at all. CyberArk just sold to Palo Alto Networks for $25B in February 2026 — the largest identity-security M&A in history.
+
+**CIEM — Cloud Infrastructure Entitlement Management.** The "make sense of cloud permissions sprawl" layer. Coined by Gartner in 2020. The problem CIEM exists to solve: AWS IAM has roughly 17,000 distinct actions; Azure RBAC has 10,000+; GCP has thousands more. The effective permission for a single AWS API call resolves through six layers of policy (identity-based policies, resource-based policies, permissions boundaries, Service Control Policies, session policies, VPC endpoint policies). No human can reason about this at scale. [Sysdig found that 98% of granted cloud permissions are unused.](https://sysdig.com/solutions/permissions-entitlement-management)
+
+Core CIEM capabilities:
+
+- **Rightsizing.** Compare actual usage (from CloudTrail, GCP Audit Logs, Azure Activity Logs) against granted permissions, and recommend least-privilege policies.
+- **Anomaly detection.** Flag unusual behavior — a service account suddenly calling unfamiliar APIs, or a developer assuming a production role at 3am.
+- **Visualization.** Graph who can access what across multi-cloud environments.
+- **Compliance reporting.** Map entitlements to control frameworks.
+
+CIEM as a standalone category is now mostly subsumed into **CNAPP — Cloud-Native Application Protection Platform** (Wiz, Tenable, CrowdStrike, Palo Alto). Standalone CIEM startups have been culled; the category resolved upward into broader cloud security.
+
+**Workload identity / non-human identity (NHI).** The "give cryptographic identity to services and agents" layer. The fastest-growing identity category. Service accounts, IAM roles, API keys, bots, CI/CD pipelines, and AI agents — collectively called **non-human identities** — now outnumber human identities by 30:1 to 100:1 depending on whose stats you trust.
+
+The legacy answer for workload identity was static credentials: a `service-account.json` key file, an AWS access key, a Salesforce integration user with a password. These leak constantly. The modern answer is **workload identity federation**: workloads prove their identity through their runtime attestation (where they are running, in which cluster, under which service account) and exchange that for short-lived credentials.
+
+- **SPIFFE** — the open standard. A SPIFFE ID is a URI like `spiffe://acme.com/payment-service`. The workload presents an SVID — a SPIFFE Verifiable Identity Document, either an X.509 cert or a JWT — proving its identity. SPIRE is the open-source reference implementation. Adopted by HPE, Bloomberg, Pinterest, Uber.
+- **AWS IRSA** — IAM Roles for Service Accounts. A Kubernetes pod with a service account can assume an AWS IAM role through OIDC token exchange, with no static AWS keys anywhere.
+- **GCP Workload Identity Federation** — lets external workloads (AWS, Azure, on-prem AD, GitHub Actions, any OIDC/SAML IdP) exchange native credentials for short-lived GCP access tokens.
+- **Azure Federated Identity Credentials** — the same pattern for Azure resources.
+
+This federation layer — short-lived OIDC token exchange replacing long-lived service-account keys — is the substrate the agent-identity drafts now sit on. When IETF drafts talk about "the agent's workload identity," they mean SPIFFE-style attestation. When they talk about "the user-on-behalf-of claim on top," they mean a SAML-or-OIDC user identity bound to that workload identity via OAuth token exchange (RFC 8693). The whole agent-auth architecture is a recombination of these existing primitives — which is why §3.1 frames most of "agent identity" as rebranded IAM.
 
 ### 1.9 Compliance — what's actually required for access control
 
