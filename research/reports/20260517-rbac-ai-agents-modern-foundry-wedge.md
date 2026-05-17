@@ -279,6 +279,40 @@ Every line in the next-gen IGA pitch deck attacks one of these.
 
 ### 2.1 The shape of the market
 
+Before the map: a quick decoder for the categories. The identity industry has invented an acronym for every layer, and the names get reused with subtle differences. Plain definitions:
+
+- **Workforce IAM / SSO.** Tools that authenticate employees into corporate apps. Okta, Microsoft Entra ID, Ping, JumpCloud. This is the layer everyone thinks of when they hear "identity." It answers: *Is this person an employee, and can they log in to Salesforce?*
+
+- **CIAM — Customer Identity and Access Management.** The same idea but for the *customers* of a B2B or B2C product, not its employees. Auth0, WorkOS, Descope, Stytch, Frontegg, Clerk. If you sign up for a SaaS product and it says "Sign up with Google" — that flow is CIAM. Different buyer (developer/product team) than workforce IAM (IT/security).
+
+- **IGA — Identity Governance and Administration.** The layer that *manages and proves compliance* of who has what access. Provisioning when employees join, deprovisioning when they leave, quarterly access reviews, separation-of-duty enforcement, entitlement catalogs. SailPoint, Saviynt. Answers: *Should this person still have this access, and can we prove to an auditor that we checked?*
+
+- **Next-Gen IGA / Access Governance.** Modern SaaS-first reimaginings of IGA, attacking the "18-month deployment" weakness of legacy. Lumos, ConductorOne, Opal, Veza, Apono. Same job, faster to deploy, friendlier UX.
+
+- **PAM — Privileged Access Management.** Vaults and session control for the *high-blast-radius* accounts: root, domain admin, DBA, AWS root. CyberArk, BeyondTrust, Delinea. Answers: *When an admin needs to log into the production database, how do we make sure they can't take the password home, and how do we record what they did?*
+
+- **Modern Infra Access.** Cloud-native PAM disruptors that replace the "vault + bastion host" model with short-lived certificates and no standing credentials. Teleport, StrongDM, HashiCorp Boundary. Same problem PAM solves, different architecture.
+
+- **CIEM — Cloud Infrastructure Entitlement Management.** Tools that make sense of the *permissions sprawl* inside cloud accounts. AWS IAM alone has ~17,000 distinct actions; 98% of granted cloud permissions are never used. Wiz, Tenable (Ermetic), Sonrai, Permiso. Answers: *Across our AWS/Azure/GCP, who can actually do what, and where can we cut?* Mostly subsumed into CNAPP (Cloud-Native Application Protection Platform) now.
+
+- **App AuthZ engines (Authorization engines).** Libraries and services that answer fine-grained "can user X do action Y on resource Z?" calls *inside* applications. OpenFGA, Cerbos, Permit.io, Oso, AuthZed/SpiceDB, AWS Verified Permissions (Cedar). The plumbing for ReBAC and ABAC inside your own app. Different audience from everything above — developers, not IT.
+
+- **NHI — Non-Human Identity (workload, agents).** Identity and access management specifically for the things that *aren't people*: service accounts, API keys, CI/CD pipelines, bots, AI agents. Astrix, Oasis Security, Entro, Token Security, Aembit. NHIs now outnumber humans 30:1 to 100:1, and traditional IAM was designed for humans, so this is a real gap.
+
+- **Identity Orchestration / Identity Fabric.** Tools that *abstract over multiple IdPs* — for organizations that ended up with Okta + Microsoft Entra + ADFS + PingFederate after a few acquisitions and want a single layer in front. Strata Identity, Aembit, SGNL (now CrowdStrike), Otterize (now Cyera). Answers: *We have four IdPs and don't want to consolidate yet — give us one front door.*
+
+- **Shadow SaaS / SaaS-to-SaaS identity.** Tools for the long tail of apps that *don't* support SAML/SCIM. Browser extensions, marketing tools, partner portals, AI tools adopted without IT. Cerby, Grip Security, Nudge Security, Reco, Wing. Answers: *Okta only sees 30% of our actual SaaS estate — who has access to the other 70%?*
+
+- **System-native RBAC.** The internal permission models that live *inside* major platforms — AWS IAM, Azure RBAC, GCP IAM, Databricks Unity Catalog, Snowflake RBAC, Salesforce profiles + permission sets, GitHub org/team/repo permissions, Workday security groups. Each one has thousands of internal permissions that the IdP cannot see, govern, or revoke from. This is the "last mile" gap §2.6 is about.
+
+Two more acronyms that show up later in the report:
+
+- **CNAPP — Cloud-Native Application Protection Platform.** The umbrella category that absorbed CIEM. Combines CIEM + CSPM (Cloud Security Posture Management) + workload protection + vulnerability scanning. Wiz, Palo Alto Prisma Cloud, CrowdStrike Falcon Cloud.
+
+- **ITDR — Identity Threat Detection and Response.** Runtime detection of identity-based attacks (token theft, suspicious privilege escalation, credential abuse). Permiso, Authomize (now Delinea), Silverfort.
+
+With those definitions, the map:
+
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │                   ENTERPRISE IDENTITY STACK (2026)                  │
