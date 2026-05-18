@@ -73,3 +73,4 @@ The `index.db` SQLite database is the authoritative source — this file mirrors
 | 20260416-RS-001 | 2026-04-16 | research | research | Arendt in America: The Origins of Totalitarianism at 75, Read Against the United States in 2026 | raw |
 | 20260517-RS-001 | 2026-05-17 | research | research | RBAC, AI Agents, and the Modern Foundry: Why Centralized Access Control Is the Wedge | raw |
 | 20260517-RS-002 | 2026-05-17 | research | research | Tenex → OpenFoundry: A 360° Strategy for Productizing a $15M-ARR Forward-Deployed AI Services Business | raw |
+| 20260517-RS-003 | 2026-05-17 | research | research | OpenFoundry — Architecture Document | raw |

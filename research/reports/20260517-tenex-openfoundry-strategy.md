@@ -93,56 +93,242 @@ The remainder of this report assumes the answer to the bottom three is "yes, wit
 
 ## Part I — Foundry, Deeply Understood
 
-Tenex cannot productize a Foundry-equivalent without absorbing what Foundry actually is. The prior research report sketched Foundry's moat as ontology + FDE motion + compliance posture. This deeper dive identifies the engineering primitives that are genuinely load-bearing versus the surface area that is replaceable.
+Tenex cannot productize a Foundry-equivalent without absorbing what Foundry actually *is* underneath the marketing. This section explains each architectural primitive from scratch — what it is, what problem it solves, what it's analogous to in software you already know, and what it would mean to replicate.
 
-### 1.1 The architectural decomposition
+### 1.1 The view from 30,000 feet
 
 Foundry is three layers stacked on a delivery system:
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  AIP — generative AI platform                              │
-│  (k-LLM access, Agent Studio, AIP Logic, Evals, Analyst)   │
+│  AIP — the AI layer                                        │
+│  LLM access, agent runtime, "AIP Logic" no-code function   │
+│  builder, evals framework, natural-language analyst        │
 ├────────────────────────────────────────────────────────────┤
-│  Foundry — data ops + Ontology + applications              │
-│  (Pipeline Builder, Code Repos, Workshop, Slate, Quiver,   │
-│   Vertex, Object Views, Actions, Functions, OSDK)          │
+│  Foundry — the operations platform (this is the heart)     │
+│  Data integration + the Ontology + app builders            │
+│  + scripting + branching + permissions                     │
 ├────────────────────────────────────────────────────────────┤
-│  Apollo — continuous delivery / infra orchestration        │
-│  (thousands of zero-downtime upgrades, on-prem to cloud)   │
+│  Apollo — the deployment system                            │
+│  Pushes platform upgrades into customer environments,      │
+│  including air-gapped defense networks                     │
 └────────────────────────────────────────────────────────────┘
 ```
 
-The internal architecture decomposes into roughly thirteen named primitives. The ranking by replicability difficulty matters more than the ranking by visibility:
+The middle layer (Foundry proper) is where everything load-bearing lives. The bottom (Apollo) only matters if you sell to the Pentagon. The top (AIP) is the newest layer; it depends entirely on the middle layer being well-built.
+
+The middle layer contains roughly thirteen named subsystems. Most of them are replaceable with off-the-shelf tools. About six of them are not. The sections below explain each one starting from "what is this thing" before going into "why Tenex should care."
+
+### 1.2 The Ontology — what "the schema" actually means
+
+**What it is.** The Ontology is the typed map of how a customer's business works, expressed as:
+
+- **Object types** — the kinds of things the business operates on. Examples: `Customer`, `Order`, `Aircraft`, `Patient`, `Shipment`.
+- **Property types** — the attributes of those things. `Customer.email`, `Order.amount`, `Aircraft.tail_number`.
+- **Link types** — how those things relate. "An `Order` is placed by a `Customer`." "A `Shipment` contains many `Orders`."
+- **Action types** — the *verbs* the business performs on those things. "Approve an Order." "Reassign an Aircraft to a different sortie." Action types are explained in detail in §1.4.
+
+**Why it exists.** A typical company's data is split across 50+ systems (Salesforce, Workday, SAP, internal databases, S3 buckets). Each system has its own schema, its own field names, its own definition of "Customer." A data warehouse can merge the data into joined tables, but those tables are *only useful for analytics* — you cannot click a button in a dashboard and say "approve this order" because the table doesn't know what "approve" means. The Ontology adds the layer where actions live.
+
+**A familiar analogy.** Imagine a database where every table has not just columns and rows, but also *stored procedures attached to the table itself* (the action types), *foreign keys that have semantic names* (link types like `placed_by` rather than `customer_id`), and *labels on every column that determine who can see it* (markings). That is the Ontology. It is the database every junior engineer wishes their company actually had.
+
+**What it looks like in practice.** A real Foundry deployment for a hospital might have ~80 object types: `Patient`, `Encounter`, `Order`, `Medication`, `Nurse`, `Shift`, `Bed`, `Diagnosis`, etc. ~200 property types. ~150 link types. ~50 action types like `assign_nurse_to_shift`, `swap_shifts`, `discharge_patient`. The Ontology Manager UI lets people define these without writing SQL.
+
+**Why it's the moat.** Once a customer has modeled their operations as an Ontology, that schema is their company's operating model. Migrating away is not a tooling swap — it is an organizational re-architecture. Net dollar retention at Palantir is consistently >120% almost entirely because of this.
+
+### 1.3 Object Storage V2 (OSv2) and the Funnel — the database underneath the Ontology
+
+**What it is.** OSv2 is the actual database that stores the Ontology's data. The Funnel is the background service that keeps OSv2 up-to-date.
+
+Think of it like this: the Ontology defines *what* exists (`Patient`, `Encounter`, etc.), and OSv2 is the underlying physical store that actually holds the rows for every Patient, every Encounter, with the right indexes, the right permission rules, and the right ability to be both *read* (for analytics) and *written* (when an operator edits something).
+
+**Why it exists.** This is the genuinely hard engineering problem at the center of Foundry. A normal data warehouse (Snowflake, BigQuery, Databricks) is built for reads — analysts run queries, the warehouse returns results, but the warehouse rows are *not directly editable*. A normal operational database (Postgres) is built for writes but doesn't scale to billions of rows of analytical data. A graph database (Neo4j) handles relationships but is bad at column-level permissions. Foundry needed all three properties simultaneously:
+
+1. Analytical scale (read paths against billions of rows from the data lake).
+2. Operational writes (transactional edits on individual primary keys, with side effects).
+3. Permission enforcement at the row *and* cell level, applied uniformly to both reads and writes.
+
+OSv2 is a purpose-built indexed object database that does all three. It stores ingested data and user edits *in the same store*, with explicit conflict-resolution rules ("if the source dataset and a user edit disagree, which one wins?").
+
+**A familiar analogy.** Imagine Postgres, but with three differences: (1) every row carries security labels that the query engine respects automatically, regardless of who's asking; (2) the rows are *also* available as analytical columns (like a column-store) for fast aggregations; (3) writes from user actions are merged with batch ingests from upstream data pipelines, with the merge logic configurable per object type. That's roughly OSv2.
+
+**The Funnel** is the orchestrator that keeps OSv2 in sync. When an upstream data pipeline drops a fresh batch of `Customer` records into the data lake, the Funnel reads the new rows, applies the right transformations, runs them through any active user-edits store, applies marking propagation, and updates the OSv2 index. When a user submits an Action that edits a Customer, the Funnel writes that edit through to OSv2 transactionally.
+
+**Why nobody outside Palantir has built this.** Most companies treat reads and writes as separate concerns served by separate systems (data warehouse + operational DB connected by ETL). Foundry treats them as one concern served by one system. Building the unified store is years of infrastructure work. The closest open-source approximation today is Iceberg (for the analytical lake) + DuckDB or ClickHouse (for the indexed column store) + Cedar or OPA (for policy evaluation) + custom code to stitch them together. That stitching is what Tenex's spine team has to build.
+
+### 1.4 Action types — the only sanctioned way to change anything
+
+**What it is.** An Action type is a typed schema for "a change someone wants to make to the data," packaged with all the rules about how that change is allowed to happen.
+
+A specific Action type — say `approve_purchase_order` — defines:
+
+- **Parameters** the caller has to supply (which `PurchaseOrder`, optional approval comment).
+- **Server-side preconditions** that must hold for the action to succeed (the PO must be in `pending` status; the approver's role must include approval authority; the amount must be ≤ their approval limit).
+- **What the action actually does** (updates the PO's status, sets `approved_by` to the current user, sets `approved_at` to current time, possibly creates a downstream `PaymentRequest` object).
+- **Side effects** outside the data itself (sends a webhook to the ERP system, emails the requester, posts to Slack).
+- **Who is allowed to invoke it** (a permission gate evaluated against the user submitting the action).
+
+**Why it exists.** In a normal database, anyone with `UPDATE` permission can change anything. There is no record of *why* a change was made, no validation that the change made business sense, no triggering of downstream effects, and no easy audit trail. Action types make every change a typed, business-meaningful event: not "row 4839 had column `status` changed from `pending` to `approved`," but "user `alice@hospital.org` approved `PurchaseOrder #4839` for `$12,400` at 2026-05-17T10:00Z."
+
+**A familiar analogy.** Action types are basically what backend engineers build manually in every well-designed REST API: a `POST /orders/:id/approve` endpoint that validates the request, checks permissions, performs the update, fires side effects, and writes an audit log. The Foundry difference is that **every change in the entire system uses this pattern, enforced by the platform, with no escape hatch.** You cannot bypass it by writing raw SQL.
+
+**The critical invariant.** Actions are *the only way* edits get persisted. A user clicking a button in Workshop submits an Action. A Function that wants to update an object submits an Action. The AIP Logic LLM that decides to mutate state submits an Action. An external agent over MCP submits an Action. There is no other write path. This is what makes "agent RBAC" architecturally tractable: agents don't have permissions over rows, they have permissions over named Actions, and each Action carries its own permission logic. **Any product Tenex builds must replicate this invariant from day one.**
+
+**What it looks like in practice.** A Foundry developer authoring an Action type in the Ontology Manager UI specifies the parameters, drags in "rules" for what the action does (create object, modify object, function rule), writes submission criteria as Boolean expressions, and configures side effects. The result is a versioned, deployable artifact that becomes callable from Workshop apps, Functions, AIP Logic, the OSDK, and MCP.
+
+### 1.5 Functions — Foundry's stored procedures, but better
+
+**What it is.** A Function is typed code (TypeScript v2, Python, or Java) that operates on Ontology objects. It can read from the Ontology, perform computations, and propose edits (which get persisted via Actions).
+
+**Why it exists.** Action types handle "the user wants to perform a named operation." Functions handle "the platform needs to compute something." Examples: a scheduling-optimization Function that takes a set of `Shift` objects and produces a recommended assignment; a pricing Function that takes an `Order` and computes the discount; a similarity Function that takes a `Patient` and returns the most similar historical cases.
+
+**A familiar analogy.** Functions are stored procedures, but written in real languages (not PL/SQL), with proper type safety, available to call from the UI, from Actions, from automations, and from agents — all using the same uniform calling convention.
+
+**What it looks like in practice.** A TypeScript v2 Function might look something like:
+
+```ts
+export const calculateDiscount = Function((order: Order): number => {
+  const customer = order.placed_by;
+  const historicalSpend = client(Order)
+    .where(o => o.placed_by === customer)
+    .aggregate(o => o.total.sum());
+  return historicalSpend > 100000 ? 0.15 : 0.05;
+});
+```
+
+This Function reads from the Ontology (the `Order` and its linked `Customer`), runs business logic, and returns a value. It can be called from a Workshop button, from an `apply_discount` Action's rule, from an AIP Logic block, or from external code via the OSDK.
+
+**The architectural cleanness.** Functions are sandboxed but real — TypeScript v2 has full `fs`, `child_process`, `crypto` access. They can return Ontology objects or numeric/string results, but they *cannot* return certain types (`User`, `Principal`, `OntologyEdit`) — those are reserved for Action rules. This keeps the security model clean: only Actions write; Functions compute.
+
+**Why it matters for Tenex.** Functions are the "code-shaped" surface that engineers consume. Action types are the "API-shaped" surface that operators and agents consume. Both must exist; both must speak the same Ontology vocabulary. Tenex's MVP needs both runtimes.
+
+### 1.6 The OSDK (Ontology Software Development Kit) — the typed API to everything
+
+**What it is.** The OSDK is auto-generated TypeScript / Python / Java client code that mirrors a specific customer's Ontology. It is published as a versioned npm or pip package; the customer's developers `import` it like any other library.
+
+**Why it exists.** If the Ontology defines `Patient`, `Encounter`, `Order`, `approve_order`, `discharge_patient`, etc., then anyone writing code against the Ontology — a Workshop module, an external Next.js app, an AIP agent, a custom integration — should get *typed access*. They should write `client(Patient).fetchPage()` and get back a strongly-typed `Patient[]`, with the IDE autocompleting property names. They should call `applyAction(ApproveOrder, { order, comment })` and get a compile error if they forget the comment. The OSDK is how Foundry makes this possible.
+
+**A familiar analogy.** Prisma, Hasura, Supabase, and PostgREST all auto-generate typed clients from a database schema. The OSDK is the same idea, but generating from a *richer schema* — one that includes action types, function signatures, search filters, and permission scopes — not just tables and columns.
+
+**What it looks like in practice.** A TypeScript snippet from a real Foundry app:
+
+```ts
+import { client } from "./client";
+import { Country, AssignAircraft } from "@my-customer/sdk";
+
+const delayedFlights = await client(Country)
+  .where(c => c.region === "EMEA")
+  .fetchPage();
+
+await applyAction(AssignAircraft, {
+  aircraft: ac,
+  newSortie: s,
+});
+```
+
+`Country`, `AssignAircraft`, and the property `region` are all generated types specific to this customer's Ontology. If the Ontology changes (someone adds a property, deprecates an action), the OSDK regenerates and the customer's app gets compile-time errors at the call sites that need updating.
+
+**The auth bifurcation.** The OSDK ships two client modes: `createPublicOauthClient` for end-user auth (the user is logged in via OAuth; their permissions apply); `createConfidentialOauthClient` for server-to-server auth (a service account; usually narrow permissions). This is the same pattern as the AWS SDK. The Foundry difference is that the OSDK enforces that *the runtime user is the permission scope* — there is no "elevate to admin" hack.
+
+**Why Tenex must ship this.** Without an OSDK, an Ontology platform is hard to integrate with. With one, every Tenex customer's developers can build apps in their own stack (Next.js, FastAPI, etc.) without leaving Tenex Ontology behind. It's the equivalent of how Stripe wins on developer experience: nobody hits Stripe's REST endpoints directly; they `import stripe` and the typed client handles everything.
+
+### 1.7 Lineage-aware permission propagation — the compliance moat
+
+**What it is.** "Lineage" is the graph of how data flows: raw table A → transform → derived table B → another transform → derived table C. Foundry tracks this graph, and crucially, it uses the graph to *propagate permissions automatically.*
+
+If raw table A has a marking of `PII`, then any derived table B that is computed from A *automatically inherits* the `PII` marking. Any chart, dashboard, Workshop app, or Ontology object that uses B inherits it transitively. To remove the marking, a developer must explicitly write `stop_propagating(PII)` in the transform code, and that change must be reviewed and merged on a protected branch.
+
+**Why it exists.** In a normal data warehouse, when an analyst writes a query that joins a PII table with a non-PII table and produces a new table, the new table has no inherited permission rules. The analyst has to remember to apply the right access controls manually. Most analysts forget. This is the #1 source of accidental PII exposure in enterprise data teams.
+
+Foundry's solution: don't trust the analyst to remember. The platform forces propagation. The PII marking *cannot* be lost accidentally because it travels with every derivation. A column can only be "declassified" via an explicit code change that gets reviewed.
+
+**A familiar analogy.** Imagine Git, but for permissions. If `parent.csv` is private and you `cp parent.csv > derived.csv`, then `derived.csv` is also private — without anyone having to chmod it. To make it public, you'd need to explicitly say `chmod public derived.csv`, and that chmod would land in a pull request someone has to approve.
+
+**Why it's the most underrated moat.** This is what regulated industries actually need. A bank cannot deploy AI agents on internal data unless the bank can *prove to the OCC* that PII never reaches an unprivileged group. Foundry can prove this because the lineage graph mechanically enforces it. Snowflake, Databricks, BigQuery, every catalog vendor, every modern data tool — none of them have an equivalent. This is why Foundry wins defense, healthcare, and financial-services deals that nobody else can.
+
+**Build it in v1.** This is the longest tail moat available to Tenex. Even a SQL-only v1 implementation (limited to transforms expressed in dbt or Spark SQL) is a real differentiator. Without it, Tenex Ontology can't expand into regulated industries.
+
+### 1.8 The other primitives, briefly
+
+The five primitives above are the load-bearing core. The other eight are described more briefly because they are either secondary or replaceable:
+
+**Foundry Branching.** Git-style branches across data + ontology + UI. Developers (especially FDEs) can branch the entire platform state, build a new use case end-to-end on real production data, and merge it back without breaking anything. This collapses the typical "dev / staging / prod" three-environment dance into a branch-and-merge workflow. Trunk-based development model. *Tenex implication: ship branching on the ontology + Workshop-equivalent in v1; skip data-pipeline branching until customers demand it.*
+
+**Data Connection.** The connector framework that ingests data from external systems. Supports three deployment patterns: direct connection (Foundry-to-SaaS-API), agent-proxy (a lightweight agent running in the customer's network), and agent-worker (heavier compute in the customer's network for high-volume sources). *Tenex implication: ship 6 launch connectors in v1 (Snowflake, Databricks, Salesforce, ServiceNow, Workday, S3); add the long tail iteratively.*
+
+**Workshop.** The no-code app builder. A Workshop module is a JSON config tree describing sections (layout), widgets (typed against Ontology object sets / properties / actions), variables (the app's runtime state), and events (button clicks update variables, run actions). Critically, modules can embed other modules and pass variables across the boundary — this is how complex apps stay maintainable. *Tenex implication: ship a Workshop-equivalent whose modules are JSON config, but make the default authoring path an agent (Claude / Cursor), not human click-and-drag. This inverts Palantir's order and is the right 2026 bet.*
+
+**MCP Servers.** Palantir ships two MCP servers: **Ontology MCP** (exposes a customer's Ontology to external agents — Claude, Cursor, ChatGPT — as tools the agent can call) and **Palantir MCP** (exposes platform-building tools to developers using Claude Code / Cursor for *building Foundry itself*). Both enforce the same security model. *Tenex implication: ship the equivalent of Ontology MCP in v1. This is now the default surface for an Ontology platform in 2026 — agents living in Claude or Cursor call Tenex Ontology's MCP server, not a Tenex web UI.*
+
+**Compute Modules.** Serverless Docker containers as a first-class platform primitive. When a customer has a Python ML model, a custom optimization algorithm, or anything else that doesn't fit in a Function, they wrap it in a Compute Module — a Docker image published to Foundry's internal registry, run as a horizontally scaling stateless service, accessible from Workshop / Actions / Functions like any other tool. Networking is zero-trust by default; egress requires explicit "Sources" (credential bundles). *Tenex implication: ship a Compute Modules equivalent on Knative or Cloud Run. ~6 weeks of work for a v1.*
+
+**Pipeline Builder.** Foundry's no-code data-transformation tool. Tables come in, transforms applied via a visual graph, datasets come out. *Tenex implication: skip. Use dbt or SQLMesh — they already exist and customers are familiar with them.*
+
+**Slate, Quiver, Contour, Vertex.** Four legacy surface-area apps. Slate is a low-level HTML/JS app framework (deprecated in favor of Workshop + custom widgets). Quiver is a chart-based exploration tool. Contour is a Tableau-ish point-and-click analytics tool. Vertex is graph exploration. *Tenex implication: skip all four. AIP has eaten most of their workflows; modern BI tools cover the rest.*
+
+**Apollo.** The deployment system. Pushes Foundry software updates from a central Hub to Agents running in customer environments (cloud, on-prem, air-gapped). Plans, constraints, release channels, rollback. *Tenex implication: ignore. Apollo only matters if you sell on-prem to defense; a SaaS-native rebuild doesn't need it.*
+
+### 1.9 Tier ranking — what to build, what to skip
+
+After all that, the practical ranking:
 
 **Tier 1 — Absolutely load-bearing (must ship in v1):**
 
-1. **Object Storage V2 (OSv2) and the Funnel.** This is the most underrated piece of Foundry. Everyone talks about "the Ontology" as if it's a schema; in practice the Ontology is a *specific database* (OSv2) and a *specific orchestrator* (Funnel) wearing a semantic layer hat. OSv2 is a purpose-built indexed object database that supports row-level and cell-level security policies decoupled from the underlying dataset permissions, and stores user edits in the same store as ingested data with explicit conflict-resolution. The Funnel is the write-path microservice that reads from datasets, restricted views, streams, and Actions, indexes everything into OSv2, and is the single biggest reason the Ontology can be both a derived view of a data lake *and* a system-of-record for operator edits. **Nobody outside Palantir has built this.**
-2. **Action types.** Typed schemas for transactional mutations with side effects. Parameters (typed, constrained, environment-aware), rules (add/modify/delete objects, function rules), submission criteria (server-side preconditions), side effects (webhooks, notifications), security (permission-checked at submission). Crucially, **Actions are the only sanctioned write path** — even AIP Logic's LLM tool calls route through Action submission. This is the architectural invariant that makes "agent RBAC" tractable: agents have permissions to invoke Actions, not raw row-level writes.
-3. **Functions (FOO — Functions on Objects).** Typed sandboxed code (TypeScript v2, Python, Java) that reads/writes the Ontology via the SDK and is callable from Workshop, Slate, OSDK clients, Action rules, automations, and AIP Logic. The bridge from "data exists" to "the ontology has behavior."
-4. **OSDK (Ontology SDK).** Auto-generated typed client code (TS/Python/Java) that mirrors a specific customer's Ontology, published as a versioned npm/pip package. The outbound API of the Ontology. What makes Foundry useful even when you're not in Foundry's own UI.
-5. **Lineage-aware permission propagation.** Markings inherited along data lineage; `stop_propagating` / `stop_requiring` syntax for explicit overrides via protected-branch proposals. The single most important piece of Foundry's governance story — compliance teams can prove at audit time that PII never reaches a derived dataset accessible to an unprivileged group, because the lineage graph enforces it deterministically.
+1. Object Storage V2 + Funnel equivalent (the indexed object DB with row/cell-level policies)
+2. Action types (the only sanctioned write path)
+3. Functions (typed code over the Ontology)
+4. OSDK (auto-generated typed client)
+5. Lineage-aware permission propagation
 
 **Tier 2 — Strongly load-bearing (must ship by month 12):**
 
-6. **Foundry Branching / Global Branching.** Git-like environments across data pipelines, the ontology itself, Workshop modules, and Actions. Apply Action accepts a `branch` parameter; FDEs can develop on real production data without breaking anything. Trunk-based development model.
-7. **Data Connection.** Three architectures (direct, agent-proxy, agent-worker) to handle SaaS APIs vs on-prem systems. The egress story.
-8. **Workshop builder runtime.** Declarative module spec (JSON config, not generated code) with sections, widgets typed against Ontology, variables, module interfaces, embedded modules, events. The agent-authorable surface for operational apps.
-9. **MCP server(s) exposing ontology to external agents.** Ontology MCP for production data agents; Palantir MCP for platform-building agents. Both enforce the same OSv2 security model, both expose different surface areas to different actors.
-10. **Compute Modules.** Serverless Docker containers as first-class platform primitive. Non-root, linux/amd64, zero-trust networking via explicit Sources. Two execution modes (function-backed and pipeline-backed).
+6. Foundry Branching (ontology + Workshop-equivalent only in v1)
+7. Data Connection (3 connector patterns)
+8. Workshop-equivalent (declarative module spec, agent-authorable)
+9. MCP server(s) exposing the Ontology
+10. Compute Modules equivalent (Docker on Knative)
 
 **Tier 3 — Surface area / replaceable:**
 
-11. Pipeline Builder (dbt / SQLMesh / Coalesce can substitute)
-12. Slate, Quiver, Contour, Vertex (all replaceable or already displaced by AIP)
+11. Pipeline Builder (use dbt or SQLMesh)
+12. Slate / Quiver / Contour / Vertex (skip)
 13. AIP Bootcamps (a sales motion, not a product)
-14. Apollo (only matters for on-prem / air-gapped; ignore for SaaS-native rebuild)
+14. Apollo (only matters for on-prem / air-gapped)
 
-### 1.2 The "all writes are Actions" invariant
+### 1.10 The "all writes are Actions" invariant — restated with a concrete example
 
-This is the single most important architectural pattern in Foundry, and the one that directly enables safe AI agents. The Palantir docs are explicit: *"Calling an AIP Logic function from an action is required for edits to be written back to the Ontology. The Ontology will not be edited unless the Logic function is executed from an action, even if the function contains an Apply action block."*
+This deserves to be called out as the single most important architectural pattern in Foundry, because it is the thing that makes safe AI agents possible.
 
-Restated: no matter how an edit is proposed — by a human clicking a button in Workshop, by a Function executing logic, by an AIP Logic LLM choosing to mutate state, by an external agent over MCP — the actual mutation goes through a typed, validated, permission-checked, audited Action submission. The agent does not get a raw write. This is the invariant that makes "give your agent access to your data" safe at enterprise scale. Any product Tenex builds must replicate this invariant from day one.
+Consider a hospital scenario. A nurse uses an AIP Logic agent that says: "Patient in bed 12 needs to be discharged." The agent has read access to the Ontology. It decides the right thing to do is to call the `discharge_patient` Action. What happens?
+
+```
+1. Agent submits Action: discharge_patient(patient_id=#12, discharger=current_user)
+                                         ↓
+2. Action service checks: is current_user authorized to call discharge_patient?
+                          (Permission check against Ontology security policies.)
+                                         ↓
+3. Action service checks submission criteria:
+   - Is the patient currently admitted? (Yes)
+   - Has the attending physician signed off? (Check via Function call)
+   - Is the bed already assigned to a new patient? (No)
+                                         ↓
+4. Action service executes the rules:
+   - Modify Patient.status = "discharged"
+   - Modify Patient.discharged_at = now()
+   - Modify Bed.status = "available"
+   - Create DischargeRecord linked to Patient
+                                         ↓
+5. Action service fires side effects:
+   - Webhook to EHR system
+   - Notification to billing team
+   - Audit log entry
+                                         ↓
+6. OSv2 commits all changes atomically.
+```
+
+The agent did not get raw write access. It invoked a typed Action, which carried the agent's user identity through every check, with every change being audited, validated, and side-effect-aware. The Palantir docs put it bluntly: *"The Ontology will not be edited unless the Logic function is executed from an action, even if the function contains an Apply action block."*
+
+This is the invariant. Every change, no matter how proposed, goes through Actions. **Any product Tenex builds must replicate this invariant from day one.** Without it, agent RBAC is a security theater; with it, agents are first-class actors that the platform can govern as rigorously as humans.
 
 ### 1.3 The day-0-to-day-365 customer journey
 
